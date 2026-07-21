@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anesthesia Record: Intraoperative & Postoperative</title>
+<style>
+  :root{
+    --navy:#1f3a52; --navy-light:#2c5578; --accent:#3d8fb0; --bg:#f4f6f8;
+    --card:#ffffff; --border:#dbe2e8; --text:#22303c; --muted:#66788a;
+    --ok:#2e8b57; --warn:#c0392b;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Tahoma,Arial,sans-serif;background:var(--bg);color:var(--text);}
+  header{background:linear-gradient(120deg,var(--navy),var(--navy-light));color:#fff;padding:22px 24px;}
+  header h1{margin:0;font-size:20px;}
+  header p{margin:4px 0 0;font-size:13px;opacity:.85;}
+  .wrap{max-width:920px;margin:0 auto;padding:20px 16px 80px;}
+  .tabbar{display:flex;gap:8px;position:sticky;top:0;background:var(--bg);padding:12px 0;z-index:5;}
+  .tabbar button{flex:1;padding:12px;border:none;border-radius:10px;background:#e2e9ee;color:var(--navy);font-weight:600;font-size:14px;cursor:pointer;}
+  .tabbar button.active{background:var(--navy);color:#fff;}
+  section.panel{display:none;}
+  section.panel.active{display:block;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 18px 6px;margin-bottom:16px;}
+  .card h2{font-size:15px;margin:0 0 12px;color:var(--navy);border-bottom:2px solid var(--border);padding-bottom:8px;}
+  .card h2 small{display:block;font-weight:400;color:var(--muted);font-size:12px;margin-top:2px;}
+  .row{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:12px;}
+  .field{flex:1;min-width:140px;}
+  .field.wide{flex:2 1 260px;}
+  .field label{display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px;font-weight:600;}
+  input[type=text],input[type=number],input[type=date],input[type=time],textarea,select{
+    width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:#fbfcfd;
+  }
+  textarea{min-height:56px;resize:vertical;font-family:inherit;}
+  .choices{display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:8px;}
+  .choices label{display:flex;align-items:center;gap:5px;font-size:13.5px;font-weight:400;background:#f0f3f5;padding:5px 10px;border-radius:20px;cursor:pointer;border:1px solid transparent;}
+  .choices input{accent-color:var(--accent);}
+  .choices label:has(input:checked){background:#dcecf2;border-color:var(--accent);color:var(--navy);font-weight:600;}
+  .subgroup{margin:6px 0 10px 4px;padding-left:12px;border-left:3px solid var(--border);}
+  .subgroup .label{font-size:12.5px;font-weight:700;color:var(--navy-light);margin-bottom:6px;}
+  .inline-q{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:8px;}
+  .inline-q .iq-label{font-size:13.5px;font-weight:600;color:var(--navy);flex:0 0 auto;}
+  .inline-q .choices{margin-bottom:0;}
+  .calc-box{background:#eef6f0;border:1px dashed var(--ok);border-radius:8px;padding:8px 12px;font-size:13px;color:#255c3f;margin-top:6px;}
+  .footer-actions{position:sticky;bottom:0;background:var(--bg);padding:14px 0;display:flex;gap:10px;border-top:1px solid var(--border);}
+  .btn{padding:12px 18px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;}
+  .btn-primary{background:var(--navy);color:#fff;flex:1;}
+  .btn-secondary{background:#e2e9ee;color:var(--navy);}
+  #statusMsg{font-size:13px;margin-top:8px;min-height:18px;}
+  #statusMsg.ok{color:var(--ok);}
+  #statusMsg.err{color:var(--warn);}
+  .config-note{background:#fff8e1;border:1px solid #e6d086;border-radius:10px;padding:12px 14px;font-size:12.5px;color:#6b5a1d;margin-bottom:16px;}
+  .config-note code{background:#fff;padding:1px 5px;border-radius:4px;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Anesthesia Record — Intraoperative &amp; Postoperative Form</h1>
+  <p>PAA Clinic · บันทึกระหว่างและหลังการระงับความรู้สึก · ข้อมูลจะถูกบันทึกลง Google Sheet เมื่อกด "บันทึกข้อมูล"</p>
+</header>
+
+<div class="wrap">
+
+  <div class="config-note" id="configNote">
+    ✅ <b>เชื่อมกับ Google Sheet เรียบร้อยแล้ว</b> — เมื่อกด "บันทึกข้อมูล" ข้อมูลจะถูกส่งเข้า Google Sheet ที่ตั้งค่าไว้โดยอัตโนมัติ
+  </div>
+
+  <div class="tabbar">
+    <button class="tab-btn active" data-tab="intraop">Intraoperative</button>
+    <button class="tab-btn" data-tab="postop">Postoperative</button>
+    <button class="tab-btn" data-tab="setup">คู่มือตั้งค่า</button>
+  </div>
+
+  <form id="anesForm">
+
+  <!-- =================== INTRAOP =================== -->
+  <section class="panel active" id="panel-intraop">
+
+    <div class="card">
+      <h2>ข้อมูลผู้ป่วย / Patient Info</h2>
+      <div class="row">
+        <div class="field"><label>HN</label><input type="text" name="hn"></div>
+        <div class="field wide"><label>Name</label><input type="text" name="name"></div>
+      </div>
+      <div class="subgroup">
+        <div class="label">Ward</div>
+        <div id="group-ward-main"></div>
+        <div id="ward-opd-wrap" style="display:none;">
+          <div class="subgroup">
+            <div class="label">OPD</div>
+            <div id="group-ward-opd"></div>
+            <div class="row" id="ward-opd-other-wrap" style="display:none;">
+              <div class="field wide"><label>ระบุ OPD อื่นๆ</label><input type="text" name="ward_opd_other_detail"></div>
+            </div>
+          </div>
+        </div>
+        <div id="ward-ipd-wrap" style="display:none;">
+          <div class="subgroup">
+            <div class="label">IPD</div>
+            <div id="group-ward-ipd"></div>
+            <div class="row" id="ward-ipd-other-wrap" style="display:none;">
+              <div class="field wide"><label>ระบุ Ward อื่นๆ</label><input type="text" name="ward_ipd_other_detail"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label>DOB (วว/ดด/ปปปป พ.ศ.)</label><div id="date-dob"></div></div>
+        <div class="field"><label>Age (auto)</label><input type="text" name="age" id="age" readonly></div>
+        <div class="field"><label>Weight (kg)</label><input type="number" step="0.1" min="0" name="weight" id="weight"></div>
+        <div class="field"><label>Height (cm)</label><input type="number" step="0.1" min="0" name="height" id="height"></div>
+        <div class="field"><label>BMI (auto)</label><input type="text" name="bmi" id="bmi" readonly></div>
+      </div>
+      <div class="row">
+        <div class="field wide"><label>Hb (g/dL) / Hct (%)</label><input type="text" name="hb_hct"></div>
+      </div>
+      <div class="row">
+        <div class="field wide"><label>Diagnosis</label><input type="text" name="diagnosis"></div>
+        <div class="field wide"><label>Operation</label><input type="text" name="operation"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Date (วว/ดด/ปปปป พ.ศ.)</label><div id="date-op_date"></div></div>
+        <div class="field"><label>Surgeon</label><input type="text" name="surgeon"></div>
+        <div class="field"><label>Allergy</label><input type="text" name="allergy"></div>
+      </div>
+      <div class="subgroup">
+        <div class="label">Blood group</div>
+        <div id="group-blood-gr"></div>
+      </div>
+      <div class="subgroup">
+        <div class="label">Department</div>
+        <div id="group-department"></div>
+        <div class="row" id="department-other-wrap" style="display:none;">
+          <div class="field wide"><label>ระบุ Department อื่นๆ</label><input type="text" name="department_other_detail"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field"><label>NPO (hours)</label><input type="number" min="0" name="npo_hours"></div>
+        <div class="field"><label>ASA class</label>
+          <select name="asa"><option value=""></option><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option></select>
+        </div>
+        <div class="field"><label>ASA-E</label>
+          <select name="asa_e"><option value=""></option><option>E</option></select>
+        </div>
+      </div>
+      <div class="subgroup">
+        <div class="label">Premedication</div>
+        <div id="group-premedication"></div>
+        <div class="row" id="premedication-detail-wrap" style="display:none;">
+          <div class="field wide"><label>ระบุ</label><input type="text" name="premedication_detail"></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field wide"><label>Problems</label><input type="text" name="problems"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Patient Safety</h2>
+      <div class="subgroup">
+        <div class="label">Surgical and Anesthesia Safety Checklist</div>
+        <div id="group-safety-checklist"></div>
+      </div>
+      <div class="subgroup">
+        <div class="label">Pressure points checked and padded</div>
+        <div id="group-pressure-points"></div>
+      </div>
+      <div class="subgroup">
+        <div class="label">Eye care</div>
+        <div id="group-eye-care"></div>
+        <div class="row" id="eye-care-other-wrap" style="display:none;">
+          <div class="field wide"><label>ระบุ</label><input type="text" name="eye_care_other_detail"></div>
+        </div>
+      </div>
+      <div class="subgroup">
+        <div class="label">Warming</div>
+        <div id="group-warming"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Preinduction Assessment</h2>
+      <div>
+        <div class="inline-q"><span class="iq-label">Change from preop assessment</span><div id="group-no-change-preop"></div></div>
+        <div class="row" id="no-change-preop-detail-wrap" style="display:none;">
+          <div class="field wide"><label>ระบุ</label><input type="text" name="no_change_preop_detail"></div>
+        </div>
+
+        <div class="inline-q"><span class="iq-label">Patient identified</span><div id="group-patient-identified"></div></div>
+
+        <div class="inline-q"><span class="iq-label">Anesthesia consent signed</span><div id="group-consent-signed"></div></div>
+
+        <div class="inline-q"><span class="iq-label">Hx PE and Lab reviewed</span><div id="group-hx-pe-lab"></div></div>
+
+        <div class="inline-q"><span class="iq-label">Aspiration risk</span><div id="group-aspiration-risk"></div></div>
+        <div class="row" id="aspiration-risk-detail-wrap" style="display:none;">
+          <div class="field wide"><label>ระบุ due to</label><input type="text" name="aspiration_risk_detail"></div>
+        </div>
+
+        <div class="inline-q"><span class="iq-label">Planned ICU</span><div id="group-planned-icu"></div></div>
+
+        <div class="inline-q"><span class="iq-label">Infection</span><div id="group-infection"></div></div>
+        <div class="row" id="infection-detail-wrap" style="display:none;">
+          <div class="field wide"><label>ระบุ</label><input type="text" name="infection_detail"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Vital Signs &amp; Consciousness (Pre-induction)</h2>
+      <div class="row">
+        <div class="field"><label>BP (mmHg)</label><input type="text" name="pre_bp" placeholder="120/80"></div>
+        <div class="field"><label>HR (bpm)</label><input type="number" min="0" name="pre_hr"></div>
+        <div class="field"><label>SpO2 (%)</label><input type="number" min="0" max="100" name="pre_spo2"></div>
+        <div class="field"><label>BT (°C)</label><input type="number" step="0.1" name="pre_bt"></div>
+      </div>
+      <div class="subgroup">
+        <div class="label">Consciousness</div>
+        <div id="group-consciousness"></div>
+      </div>
+      <div class="subgroup">
+        <div class="label">On O2 supplement</div>
+        <div id="group-o2supp-yn"></div>
+        <div id="group-o2supp" style="display:none;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Anesthetic Technique (Main)</h2>
+      <div id="group-technique-main"></div>
+      <div class="subgroup" id="ga-detail" style="display:none;">
+        <div class="label">Induction</div>
+        <div id="group-ga-induction"></div>
+        <div class="label" style="margin-top:8px;">Maintenance</div>
+        <div id="group-ga-maintenance"></div>
+        <div class="label" style="margin-top:8px;">RSI</div>
+        <div id="group-ga-rsi"></div>
+      </div>
+      <div class="subgroup" id="ra-detail" style="display:none;">
+        <div class="label">Regional Anesthesia — Type</div>
+        <div id="group-ra-type"></div>
+        <div class="row"><div class="field wide"><label>Regional anesthesia detail</label><input type="text" name="ra_main_detail"></div></div>
+      </div>
+      <div class="subgroup" id="mac-detail" style="display:none;">
+        <div class="label">MAC — Sedation</div>
+        <div id="group-mac-sedation"></div>
+      </div>
+      <div class="row" id="technique-other-detail-wrap" style="display:none;">
+        <div class="field wide"><label>Other technique (ระบุ)</label><input type="text" name="technique_other_detail"></div>
+      </div>
+
+      <h2 style="margin-top:14px;">Anesthetic Technique (Additional)</h2>
+      <div id="group-technique-additional"></div>
+      <div class="row" style="margin-top:2px;">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13.5px;background:#f0f3f5;padding:5px 10px;border-radius:20px;">
+          <input type="checkbox" name="technique_additional_ra_fail" value="Yes">GA/TIVA due to RA fail/inadequate/wear off
+        </label>
+      </div>
+      <div class="subgroup" id="technique-additional-shot-wrap" style="display:none;">
+        <div class="label">Single shot / Continuous</div>
+        <div id="group-technique-additional-shot"></div>
+      </div>
+      <div class="row" id="technique-additional-detail-wrap" style="display:none;">
+        <div class="field wide"><label>Additional regional / other detail</label><input type="text" name="ra_additional_detail"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Monitor</h2>
+      <div id="group-monitor"></div>
+      <div class="row"><div class="field wide"><label>Other monitor (ระบุ)</label><input type="text" name="monitor_other_detail"></div></div>
+    </div>
+
+    <div class="card">
+      <h2>Airway</h2>
+      <div class="subgroup">
+        <div class="label">Laryngoscopic view</div>
+        <div id="group-airway-view"></div>
+      </div>
+      <div class="subgroup">
+        <div class="label">Type</div>
+        <div id="group-airway-type"></div>
+        <div class="row">
+          <div class="field"><label>Size</label><input type="text" name="airway_size"></div>
+          <div class="field"><label>Depth (cm)</label><input type="text" name="airway_depth"></div>
+          <div class="field wide"><label>Other type detail</label><input type="text" name="airway_type_other"></div>
+        </div>
+      </div>
+      <div class="subgroup">
+        <div class="label">Intubation technique</div>
+        <div id="group-intubation-technique"></div>
+        <div class="row"><div class="field wide"><label>Other technique detail</label><input type="text" name="intubation_technique_other"></div></div>
+      </div>
+      <div class="row"><div class="field wide"><label>รายละเอียดเพิ่มเติม (ไม่บังคับ)</label><input type="text" name="airway_extra_detail"></div></div>
+      <div class="subgroup">
+        <div class="label">Breathing system</div>
+        <div id="group-breathing-system"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>สภาพผู้ป่วยหลังผ่าตัด (Condition Before Transfer)</h2>
+      <div class="row">
+        <div class="field"><label>BP (mmHg)</label><input type="text" name="post_bp" placeholder="120/80"></div>
+        <div class="field"><label>HR (bpm)</label><input type="number" name="post_hr"></div>
+        <div class="field"><label>SpO2 (%)</label><input type="number" min="0" max="100" name="post_spo2"></div>
+      </div>
+      <div class="subgroup"><div class="label">Consciousness</div><div id="group-post-consciousness"></div></div>
+      <div class="subgroup"><div class="label">Airway support</div><div id="group-post-airway-support"></div></div>
+      <div class="subgroup"><div class="label">Respiration</div><div id="group-post-respiration"></div></div>
+      <div class="subgroup"><div class="label">Transfer to</div><div id="group-transfer-to"></div></div>
+    </div>
+
+    <div class="card">
+      <h2>Surgical and Anesthesia Duration <small>เวลาทั้งหมดใส่เป็นรูปแบบ 24 ชั่วโมง 00:00–23:59 (ชม:นาที) — คำนวณระยะเวลาอัตโนมัติ</small></h2>
+      <div class="row">
+        <div class="field"><label>Time to OR</label><input type="time" name="t_to_or" class="timecalc"></div>
+        <div class="field"><label>Anes START</label><input type="time" name="t_start" class="timecalc"></div>
+        <div class="field"><label>Anes STOP</label><input type="time" name="t_stop" class="timecalc"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Operation start (ลงมีด)</label><input type="time" name="t_incision" class="timecalc"></div>
+        <div class="field"><label>Transfer</label><input type="time" name="t_transfer" class="timecalc"></div>
+        <div class="field"><label>Antibiotic start</label><input type="time" name="t_abo" class="timecalc"></div>
+      </div>
+      <div class="calc-box">
+        Total Anes time: <b id="calcTotalAnes">—</b> min &nbsp;|&nbsp;
+        Op time: <b id="calcOpTime">—</b> min &nbsp;|&nbsp;
+        ABO time before incision: <b id="calcAboTime">—</b> min
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>ภาวะแทรกซ้อนทางวิสัญญีระหว่างผ่าตัด</h2>
+      <div class="subgroup"><div class="label">Intubation associated</div><div id="group-comp-intubation"></div></div>
+      <div class="subgroup"><div class="label">Regional anesthesia associated</div><div id="group-comp-ra"></div></div>
+      <div class="subgroup"><div class="label">Cardiovascular</div><div id="group-comp-cv"></div></div>
+      <div class="subgroup">
+        <div class="label">Blood loss</div>
+        <div class="choices">
+          <label><input type="checkbox" id="bloodLossCheckbox" name="comp_blood_loss" value="Yes">Blood loss &gt; 500 ml or &gt; 20% Total blood volume</label>
+        </div>
+        <div class="row" id="blood-loss-detail-wrap" style="display:none;">
+          <div class="field"><label>ปริมาณ Blood loss (mL)</label><input type="number" min="0" name="blood_loss_amount"></div>
+          <div class="field wide"><label>Blood component ที่ได้รับ</label><input type="text" name="blood_component_detail"></div>
+        </div>
+      </div>
+      <div class="subgroup"><div class="label">Neurological</div><div id="group-comp-neuro"></div></div>
+      <div class="subgroup"><div class="label">Other system</div><div id="group-comp-other-system"></div></div>
+      <div class="subgroup"><div class="label">Hospitalization / ICU admission / Dead</div><div id="group-comp-hosp"></div></div>
+      <div class="subgroup"><div class="label">Miscellaneous</div><div id="group-comp-misc"></div></div>
+      <div class="subgroup"><div class="label">Other</div><div id="group-comp-other"></div></div>
+      <div class="row"><div class="field wide"><label>Adverse event / complication — time, description, action taken</label><textarea name="intraop_adverse_detail"></textarea></div></div>
+    </div>
+
+    <div class="card">
+      <h2>ทีมวิสัญญี</h2>
+      <div class="row">
+        <div class="field wide"><label>Anesthesiologist</label><div id="select-anesthesiologist"></div></div>
+        <div class="field wide"><label>Nurse anesthetist</label><div id="select-nurse-anesthetist"></div></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- =================== POSTOP =================== -->
+  <section class="panel" id="panel-postop">
+
+    <div class="card">
+      <h2>ภาวะแทรกซ้อนทางวิสัญญีในห้องพักฟื้น</h2>
+      <div class="subgroup"><div class="label">Intubation associated</div><div id="group-pacu-comp-intubation"></div></div>
+      <div class="subgroup"><div class="label">Cardiovascular</div><div id="group-pacu-comp-cv"></div></div>
+      <div class="subgroup"><div class="label">Neurological</div><div id="group-pacu-comp-neuro"></div></div>
+      <div class="subgroup"><div class="label">Other system</div><div id="group-pacu-comp-other-system"></div></div>
+      <div class="subgroup"><div class="label">Hospitalization / ICU admission / Dead</div><div id="group-pacu-comp-hosp"></div></div>
+      <div class="subgroup"><div class="label">Miscellaneous</div><div id="group-pacu-comp-misc"></div></div>
+      <div class="subgroup"><div class="label">Other</div><div id="group-pacu-comp-other"></div></div>
+      <div class="row"><div class="field wide"><label>Adverse event / complication — time, description, action taken</label><textarea name="pacu_adverse_detail"></textarea></div></div>
+      <div class="row"><div class="field wide"><label>พยาบาลห้องพักฟื้น</label><input type="text" name="pacu_nurse"></div></div>
+    </div>
+
+    <div class="card">
+      <h2>บันทึกการดูแลผู้ป่วยหลังการผ่าตัด 24 ชั่วโมง</h2>
+      <div id="group-followup24"></div>
+      <div class="row"><div class="field wide"><label>รายละเอียดเพิ่มเติม <span id="followup24RequiredNote" style="color:var(--warn);font-weight:700;display:none;">(บังคับระบุ — พบภาวะแทรกซ้อน)</span></label><textarea name="followup24_detail" id="followup24_detail"></textarea></div></div>
+    </div>
+
+    <div class="card">
+      <h2>ปัญหาระหว่างรับการระงับความรู้สึก</h2>
+      <div class="subgroup">
+        <div class="label">Awareness</div>
+        <div class="choices">
+          <label><input type="radio" name="awareness" value="No">No</label>
+          <label><input type="radio" name="awareness" value="Yes">Yes</label>
+        </div>
+        <div class="row" id="awareness-class-wrap" style="display:none;">
+          <div class="field wide">
+            <label>Awareness Class</label>
+            <select name="awareness_class">
+              <option value=""></option>
+              <option value="Class1">Class 1 — ได้ยิน (Isolated auditory perception)</option>
+              <option value="Class2">Class 2 — รู้สึก (Tactile perception)</option>
+              <option value="Class3">Class 3 — เจ็บ (Pain)</option>
+              <option value="Class4">Class 4 — ไม่สามารถขยับตัวได้ (Paralysis)</option>
+              <option value="Class5">Class 5 — ไม่สามารถขยับตัวได้และเจ็บ (Paralysis and Pain)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div id="group-perianesthesia-problems"></div>
+      <div class="row"><div class="field wide"><label>อื่นๆ ระบุ</label><input type="text" name="perianesthesia_other_detail"></div></div>
+    </div>
+
+    <div class="card">
+      <h2>ปัญหาหลังผ่าตัด</h2>
+      <div id="group-postop-problems"></div>
+      <div class="row" id="skin-detail-wrap" style="display:none;">
+        <div class="field wide"><label>ผิวหนังมีรอยแดง/ไหม้ — ระบุรายละเอียด</label><input type="text" name="skin_detail"></div>
+      </div>
+      <div class="row" id="numbness-detail-wrap" style="display:none;">
+        <div class="field wide"><label>ชา/อ่อนแรง เนื่องจากการจัดท่า — ระบุรายละเอียด</label><input type="text" name="numbness_detail"></div>
+      </div>
+      <div class="row">
+        <div class="field wide"><label>อื่นๆ ระบุ</label><input type="text" name="postop_other_detail"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>การระงับปวด</h2>
+      <div class="row">
+        <div class="field">
+          <label>Pain score (NRS 0–10)</label>
+          <input type="number" min="0" max="10" name="pain_score">
+          <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">0–3 no/mild · 4–7 moderate · 8–10 severe</div>
+        </div>
+        <div class="field wide">
+          <label>ความพึงพอใจต่อการระงับปวด</label>
+          <div class="choices">
+            <label><input type="radio" name="pain_satisfaction" value="พึงพอใจ">พึงพอใจ</label>
+            <label><input type="radio" name="pain_satisfaction" value="ไม่พึงพอใจ">ไม่พึงพอใจ</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>ระดับความพึงพอใจต่อการบริการทางวิสัญญีในครั้งนี้</h2>
+      <div class="choices" id="group-service-satisfaction"></div>
+      <div class="row"><div class="field wide"><label>ระบุสิ่งที่ต้องการให้ปรับปรุง / สิ่งที่ดีเยี่ยม</label><textarea name="feedback_detail"></textarea></div></div>
+    </div>
+
+    <div class="card">
+      <h2>การเยี่ยมหลังผ่าตัด</h2>
+      <div class="row">
+        <div class="field"><label>วันที่เยี่ยม (วว/ดด/ปปปป พ.ศ.)</label><div id="date-visit_date"></div></div>
+        <div class="field wide"><label>พยาบาลเยี่ยมหลังผ่าตัด</label><div id="select-visit-nurse"></div></div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- =================== SETUP GUIDE =================== -->
+  <section class="panel" id="panel-setup">
+    <div class="card">
+      <h2>ขั้นตอนเชื่อมฟอร์มนี้กับ Google Sheet</h2>
+      <ol style="font-size:13.5px;line-height:1.9;">
+        <li>สร้าง Google Sheet ใหม่ ตั้งชื่อ เช่น <code>Anesthesia_Intraop_Postop_Data</code></li>
+        <li>ไปที่เมนู <b>Extensions → Apps Script</b> แล้วลบโค้ดเดิมทั้งหมด วางโค้ดนี้แทน:</li>
+      </ol>
+      <textarea readonly style="min-height:230px;font-family:monospace;font-size:12px;">function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
+
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(["Timestamp"].concat(Object.keys(data)));
+  }
+  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  var row = headers.map(function(h) {
+    if (h === "Timestamp") return new Date();
+    return data[h] !== undefined ? data[h] : "";
+  });
+  sheet.appendRow(row);
+
+  return ContentService.createTextOutput(JSON.stringify({status:"success"}))
+    .setMimeType(ContentService.MimeType.JSON);
+}</textarea>
+      <ol start="3" style="font-size:13.5px;line-height:1.9;">
+        <li>กด <b>Deploy → New deployment</b> → เลือกประเภท <b>Web app</b></li>
+        <li>ตั้งค่า <b>Execute as: Me</b> และ <b>Who has access: Anyone</b> แล้วกด Deploy</li>
+        <li>คัดลอก <b>Web app URL</b> ที่ได้</li>
+        <li>เปิดไฟล์ HTML นี้ด้วยโปรแกรมแก้ไขข้อความ ค้นหา <code>GOOGLE_SCRIPT_URL</code> แล้ววาง URL ที่คัดลอกแทนที่ <code>"PASTE_YOUR_WEB_APP_URL_HERE"</code></li>
+        <li>บันทึกไฟล์ แล้วเปิดฟอร์มใหม่อีกครั้ง — เมื่อกด "บันทึกข้อมูล" ข้อมูลจะถูกส่งไปเพิ่มเป็นแถวใหม่ใน Sheet โดยอัตโนมัติ</li>
+      </ol>
+      <p style="font-size:12.5px;color:var(--muted);">หมายเหตุ: เพราะเป็นการส่งข้อมูลแบบ <code>no-cors</code> จึงไม่สามารถอ่านผลลัพธ์ตอบกลับได้โดยตรงจากฟอร์ม — ระบบจะแจ้งว่า "ส่งข้อมูลแล้ว" เมื่อคำขอถูกส่งสำเร็จ แนะนำให้เปิด Google Sheet ทิ้งไว้เพื่อตรวจสอบว่าแถวข้อมูลเข้ามาจริง</p>
+    </div>
+  </section>
+
+  <div class="footer-actions">
+    <button type="button" class="btn btn-secondary" id="resetBtn">ล้างฟอร์ม</button>
+    <button type="submit" class="btn btn-primary" id="submitBtn">บันทึกข้อมูล → Google Sheet</button>
+  </div>
+  <div id="statusMsg"></div>
+
+  </form>
+</div>
+
+<script>
+// ================= CONFIG =================
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwdUqwM00bUs3NRCNFyFMJzjcGGzo5q2BFA8aB7E9zgZtKEgTvely8fW1RHYQB2Wec/exec";
+// ============================================
+
+// ---------- Tabs ----------
+document.querySelectorAll(".tab-btn").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-"+btn.dataset.tab).classList.add("active");
+    window.scrollTo({top:0,behavior:"smooth"});
+  });
+});
+
+// ---------- Helper builders ----------
+function buildChoiceGroup(containerId, name, options, type){
+  type = type || "checkbox";
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const div = document.createElement("div");
+  div.className = "choices";
+  options.forEach(opt=>{
+    const label = document.createElement("label");
+    const input = document.createElement("input");
+    input.type = type;
+    input.name = type === "radio" ? name : (name + "[]");
+    input.value = opt;
+    label.appendChild(input);
+    label.appendChild(document.createTextNode(opt));
+    div.appendChild(label);
+  });
+  el.appendChild(div);
+}
+
+// ---------- Staff dropdown data ----------
+const ANESTHESIOLOGISTS = [
+  ["อ.ยอดยิ่ง ปัญจสวัสดิ์วงศ์","AN09"],["อ.วรวุธ ลาภพิเศษพันธุ์","AN43"],["อ.ธนู หินทอง","AN04"],
+  ["อ.นุชนารถ บุญจึงมงคล","AN05"],["อ.อานันท์ชนก ศฤงคารินกุล","AN23"],["อ.ตันหยง พิพานเมฆาภรณ์","AN24"],
+  ["อ.สุรพงษ์ หล่อสมฤดี","AN25"],["อ.สรัตวดี หล่อสมฤดี","AN28"],["อ.ภาสกร สวัสดิรักษ์","AN32"],
+  ["อ.เศรษฐพงศ์ บุญศรี","AN36"],["อ.อาทิตย์ เสมอเชื้อ","AN44"],["อ.ปรางค์มาลี ลือชารัศมี","AN46"],
+  ["อ.ภูริพงศ์ จันทิมา","AN49"],["อ.วรางคณา ลาภพิเศษพันธุ์","AN50"],["อ.ภานุวัฒน์ ลาภพิเศษพันธุ์","AN52"],
+  ["อ.อิศราพงษ์ เพียรงาน","AN53"],["อ.ศรีสุลักษณ์ คะชา","AN54"],["อ.ณัฐสุดา โพธิกุล","AN57"],
+  ["อ.กรรณิการ์ สมิทธิเศรษฐ์","AN58"],["อ.กันธรากร อุ่นจิตติ","AN61"],["อ.อานนท์ ศักดิ์เรืองแมน","AN63"],
+  ["อ.ศมน วานิชพงษ์พันธุ์","AN64"],["อ.กิตติธร ศุภพิพัฒน์","AN68"],["อ.กวิน โชตินฤมล","AN69"],
+  ["อ.วิลาสินี บุณยนฤธี","AN70"],["อ.ณิชกุล คนการณ์","AN74"],["อ.ลภัสกรณ์ ยะปะนัน","AN75"],
+  ["อ.เนตรชนก นาคทั่ง","AN76"],["อ.ณัฐมน ต้นอ่อน","AN77"],["อ.ณัช วิเศษสิงห์","AN78"]
+];
+
+const NURSES_FULLTIME = [
+  "นางสาวปาริชาติ ลมอ่อน","นางสาวอาทิตยา ศึกษา","นางสาวณริดา เนตรทิพย์",
+  "นางสาวชฎาพร มาผาบ","นางสาวกมณฑ์พัชญ์ แก้วตา"
+];
+const NURSES_PARTTIME = [
+  "นางสาวเอมอร ดอนเช้า","นางสาวเกศศิรินทร์ ธีระสวัสดิ์","นางสาวจิราพร ดำงาม","นางอุไร บุญทา",
+  "นางสาวกมณฑ์พัชญ์ แก้วตา","นางสาวเกศินี ศักดิ์บุญ","นางสาวดลนภา สงเคราะห์ธรรม","นายทวีศักดิ์ ขึมจันทร์",
+  "นางสาวชัญญา โตศิริพัฒนา","นางสาวศตพร กลัดเข็มเพชร","นางอรุณลักษณ์ ส่งศรี","นางสุพร อุตสาคต",
+  "นางสาวดอกเอื้อง ผลผ่อง","นางสาวบงกช ธิติบดินทร์","นางสาวนงลักษณ์ วงค์จันทร์มา",
+  "นางลัดดาพร พิมพ์วงษ์","นางสาวฌาณิกา พูลสระผล"
+];
+
+function buildSelect(containerId, name, {placeholder="เลือกรายชื่อ", options=null, groups=null}={}){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  const sel = document.createElement("select");
+  sel.name = name;
+  sel.appendChild(new Option(placeholder, ""));
+  if(options){
+    options.forEach(o=> sel.appendChild(new Option(o, o)));
+  }
+  if(groups){
+    groups.forEach(g=>{
+      const og = document.createElement("optgroup");
+      og.label = g.label;
+      g.items.forEach(o=> og.appendChild(new Option(o, o)));
+      sel.appendChild(og);
+    });
+  }
+  el.appendChild(sel);
+}
+
+buildSelect("select-anesthesiologist", "anesthesiologist", {
+  placeholder: "เลือกวิสัญญีแพทย์",
+  options: ANESTHESIOLOGISTS.map(([n,code]) => `${n} (${code})`)
+});
+buildSelect("select-nurse-anesthetist", "nurse_anesthetist", {
+  placeholder: "เลือกวิสัญญีพยาบาล",
+  groups: [
+    {label:"Full-time", items: NURSES_FULLTIME},
+    {label:"Part-time", items: NURSES_PARTTIME}
+  ]
+});
+buildSelect("select-visit-nurse", "visit_nurse", {
+  placeholder: "เลือกพยาบาลเยี่ยมหลังผ่าตัด",
+  groups: [
+    {label:"Full-time", items: NURSES_FULLTIME},
+    {label:"Part-time", items: NURSES_PARTTIME}
+  ]
+});
+
+// ---------- Ward / Department ----------
+buildChoiceGroup("group-ward-main","ward_main",["OPD","IPD"],"radio");
+buildChoiceGroup("group-ward-opd","ward_opd_sub",["Sriphat dental","OPD OBGYN","OPDSx","OPDmed","Other"],"radio");
+buildChoiceGroup("group-ward-ipd","ward_ipd_sub",["11C","12C","13C","14C","14S","14B","15S","IMW","ICU","Other"],"radio");
+buildChoiceGroup("group-department","department",["Sx","Med","ENT","EYE","Ortho","OBGYN","Ped","Xray","Dental","Anes","Cath lab","Other"],"radio");
+buildChoiceGroup("group-blood-gr","blood_gr",["A","B","O","AB"],"radio");
+buildChoiceGroup("group-premedication","premedication",["No","Yes"],"radio");
+
+document.querySelectorAll('input[name="ward_main"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const isOPD = document.querySelector('input[name="ward_main"][value="OPD"]').checked;
+    const isIPD = document.querySelector('input[name="ward_main"][value="IPD"]').checked;
+    document.getElementById("ward-opd-wrap").style.display = isOPD ? "block" : "none";
+    document.getElementById("ward-ipd-wrap").style.display = isIPD ? "block" : "none";
+  });
+});
+document.querySelectorAll('input[name="ward_opd_sub"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const isOther = document.querySelector('input[name="ward_opd_sub"][value="Other"]').checked;
+    document.getElementById("ward-opd-other-wrap").style.display = isOther ? "flex" : "none";
+  });
+});
+document.querySelectorAll('input[name="ward_ipd_sub"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const isOther = document.querySelector('input[name="ward_ipd_sub"][value="Other"]').checked;
+    document.getElementById("ward-ipd-other-wrap").style.display = isOther ? "flex" : "none";
+  });
+});
+document.querySelectorAll('input[name="department"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const isOther = document.querySelector('input[name="department"][value="Other"]').checked;
+    document.getElementById("department-other-wrap").style.display = isOther ? "flex" : "none";
+  });
+});
+document.querySelectorAll('input[name="premedication"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const isYes = document.querySelector('input[name="premedication"][value="Yes"]').checked;
+    document.getElementById("premedication-detail-wrap").style.display = isYes ? "flex" : "none";
+  });
+});
+
+// ---------- BMI auto-calc ----------
+function recalcBMI(){
+  const w = parseFloat(document.getElementById("weight").value);
+  const h = parseFloat(document.getElementById("height").value);
+  if(w>0 && h>0){
+    const bmi = w / Math.pow(h/100, 2);
+    document.getElementById("bmi").value = bmi.toFixed(1);
+  } else {
+    document.getElementById("bmi").value = "";
+  }
+}
+document.getElementById("weight").addEventListener("input", recalcBMI);
+document.getElementById("height").addEventListener("input", recalcBMI);
+
+// ---------- Patient Safety ----------
+buildChoiceGroup("group-safety-checklist","safety_checklist",["Yes","No"],"radio");
+buildChoiceGroup("group-pressure-points","pressure_points",["Yes","No"],"radio");
+buildChoiceGroup("group-eye-care","eye_care",["None","Ointment","Tape","Tegaderm","Other"],"radio");
+buildChoiceGroup("group-warming","warming",["Blanket","Forced air warmer","HME (filter)","Fluid warmer","Ranger"],"checkbox");
+document.querySelectorAll('input[name="eye_care"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const isOther = document.querySelector('input[name="eye_care"][value="Other"]').checked;
+    document.getElementById("eye-care-other-wrap").style.display = isOther ? "flex" : "none";
+  });
+});
+
+// ---------- Preinduction ----------
+buildChoiceGroup("group-no-change-preop","no_change_preop",["No","Yes"],"radio");
+buildChoiceGroup("group-patient-identified","patient_identified",["No","Yes"],"radio");
+buildChoiceGroup("group-consent-signed","consent_signed",["No","Yes"],"radio");
+buildChoiceGroup("group-hx-pe-lab","hx_pe_lab",["No","Yes"],"radio");
+buildChoiceGroup("group-aspiration-risk","aspiration_risk",["No","Yes"],"radio");
+buildChoiceGroup("group-planned-icu","planned_icu",["No","Yes"],"radio");
+buildChoiceGroup("group-infection","infection",["No","Yes"],"radio");
+
+function wireYesDetail(radioName, wrapId){
+  document.querySelectorAll(`input[name="${radioName}"]`).forEach(inp=>{
+    inp.addEventListener("change", ()=>{
+      const isYes = document.querySelector(`input[name="${radioName}"][value="Yes"]`).checked;
+      document.getElementById(wrapId).style.display = isYes ? "flex" : "none";
+    });
+  });
+}
+wireYesDetail("no_change_preop","no-change-preop-detail-wrap");
+wireYesDetail("aspiration_risk","aspiration-risk-detail-wrap");
+wireYesDetail("infection","infection-detail-wrap");
+
+// ---------- Consciousness / O2 ----------
+buildChoiceGroup("group-consciousness","consciousness",["Alert","Drowsiness","Stupor","Coma"],"radio");
+buildChoiceGroup("group-o2supp-yn","o2_supplement_yn",["No","Yes"],"radio");
+buildChoiceGroup("group-o2supp","o2_supplement",["ETT","HFNC","Mask c bag","O2 Canula"],"radio");
+document.querySelectorAll('input[name="o2_supplement_yn"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const isYes = document.querySelector('input[name="o2_supplement_yn"][value="Yes"]').checked;
+    document.getElementById("group-o2supp").style.display = isYes ? "block" : "none";
+  });
+});
+
+// ---------- Technique ----------
+buildChoiceGroup("group-technique-main","technique_main",["General anesthesia","Regional anesthesia","MAC","Local/topical","Other"],"radio");
+buildChoiceGroup("group-ga-induction","ga_induction",["Intravenous","Inhalation"],"radio");
+buildChoiceGroup("group-ga-maintenance","ga_maintenance",["TIVA","Inhalation"],"radio");
+buildChoiceGroup("group-ga-rsi","ga_rsi",["No","Yes"],"radio");
+buildChoiceGroup("group-ra-type","ra_type",["Spinal","Epidural","CSE","Caudal","Peripheral nerve block"],"checkbox");
+buildChoiceGroup("group-mac-sedation","mac_sedation",["With sedation","Without sedation"],"radio");
+buildChoiceGroup("group-technique-additional","technique_additional",["Epidural","Spinal","Caudal","Peripheral nerve block","Local/topical","Other"],"checkbox");
+buildChoiceGroup("group-technique-additional-shot","technique_additional_shot",["Single shot","Continuous"],"radio");
+
+document.querySelectorAll('input[name="technique_main"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const v = document.querySelector('input[name="technique_main"]:checked')?.value;
+    document.getElementById("ga-detail").style.display = v === "General anesthesia" ? "block" : "none";
+    document.getElementById("ra-detail").style.display = v === "Regional anesthesia" ? "block" : "none";
+    document.getElementById("mac-detail").style.display = v === "MAC" ? "block" : "none";
+    document.getElementById("technique-other-detail-wrap").style.display = v === "Other" ? "flex" : "none";
+  });
+});
+
+document.getElementById("bloodLossCheckbox").addEventListener("change", function(){
+  document.getElementById("blood-loss-detail-wrap").style.display = this.checked ? "flex" : "none";
+});
+
+function updateTechniqueAdditionalVisibility(){
+  const checked = Array.from(document.querySelectorAll('input[name="technique_additional[]"]:checked')).map(c=>c.value);
+  const showShot = checked.includes("Epidural") || checked.includes("Spinal") || checked.includes("Peripheral nerve block");
+  document.getElementById("technique-additional-shot-wrap").style.display = showShot ? "block" : "none";
+  document.getElementById("technique-additional-detail-wrap").style.display = checked.length > 0 ? "flex" : "none";
+}
+document.querySelectorAll('input[name="technique_additional[]"]').forEach(inp=>{
+  inp.addEventListener("change", updateTechniqueAdditionalVisibility);
+});
+
+// ---------- Monitor ----------
+buildChoiceGroup("group-monitor","monitor",["NIBP","Invasive BP","SpO2","Temp","EKG","EtCO2","Etgas","CVP","Urine output","Airway pressure","BIS","TOF","PPV","Other"],"checkbox");
+
+// ---------- Airway ----------
+buildChoiceGroup("group-airway-view","airway_view",["Grade I","Grade II","Grade III","Grade IV","ไม่ได้ตรวจ"],"radio");
+buildChoiceGroup("group-airway-type","airway_type",["Orotracheal","Nasotracheal","Tracheostomy","LMA","Mask","Double lumen","Bronchial blocker","Oral airway","Nasal airway","O2 supplement","Other"],"radio");
+buildChoiceGroup("group-intubation-technique","intubation_technique",["Already intubated","Awake","Direct laryngoscope","VDO laryngoscope","fiberoptic","Frova","Manual in line stabilization","Other"],"radio");
+buildChoiceGroup("group-breathing-system","breathing_system",["Semi-closed/Circle","Semi-open: Jackson Rees/Bain"],"radio");
+
+// ---------- Condition before transfer ----------
+buildChoiceGroup("group-post-consciousness","post_consciousness",["ตื่นลืมตาเอง","เรียกลืมตาได้","ต้องการให้หลับต่อ","ไม่ตื่นไม่ตอบสนอง"],"radio");
+buildChoiceGroup("group-post-airway-support","post_airway_support",["None","Retained ETT","Tracheostomy","Oral/Nasal airway"],"radio");
+buildChoiceGroup("group-post-respiration","post_respiration",["Spontaneous","Assisted","Controlled"],"radio");
+buildChoiceGroup("group-transfer-to","transfer_to",["RR","ICU","Ward","บ้าน","Dead"],"radio");
+
+// ---------- Intraop complications ----------
+buildChoiceGroup("group-comp-intubation","comp_intubation",["Esophageal intubation","Desaturation","Re-intubation","Expected Difficult intubation","Unexpected Difficult intubation","Pulmonary aspiration"],"checkbox");
+buildChoiceGroup("group-comp-ra","comp_ra",["High spinal block","Wet tap","LAST","PNB: Paresthesia","PNB: Vascular puncture","PNB: Pneumothorax"],"checkbox");
+buildChoiceGroup("group-comp-cv","comp_cv",["Arrhythmia required treatment","Cardiac arrest","Suspected MI/Ischemia"],"checkbox");
+buildChoiceGroup("group-comp-neuro","comp_neuro",["Awareness (during GA)","Coma/CVA/Convulsion","Nerve injuries"],"checkbox");
+buildChoiceGroup("group-comp-other-system","comp_other_system",["Suspected MH","Anaphylaxis/Anaphylactoid reaction"],"checkbox");
+buildChoiceGroup("group-comp-hosp","comp_hosp",["Unplanned Hospital","Unplanned ICU admission","Death"],"checkbox");
+buildChoiceGroup("group-comp-misc","comp_misc",["Hypothermia","Erythema/Rash/Urticaria","Nausea/vomiting","Shivering","Dental injury"],"checkbox");
+buildChoiceGroup("group-comp-other","comp_other",["Equipment malfunction/failure","Drug error","Other"],"checkbox");
+
+// ---------- PACU complications ----------
+buildChoiceGroup("group-pacu-comp-intubation","pacu_comp_intubation",["Esophageal intubation","Desaturation","Re-intubation","Expected Difficult intubation","Unexpected Difficult intubation","Pulmonary aspiration"],"checkbox");
+buildChoiceGroup("group-pacu-comp-cv","pacu_comp_cv",["Arrhythmia required treatment","Cardiac arrest","Suspected MI/Ischemia"],"checkbox");
+buildChoiceGroup("group-pacu-comp-neuro","pacu_comp_neuro",["Awareness (during GA)","Coma/CVA/Convulsion","Nerve injuries"],"checkbox");
+buildChoiceGroup("group-pacu-comp-other-system","pacu_comp_other_system",["Suspected MH","Anaphylaxis/Anaphylactoid reaction"],"checkbox");
+buildChoiceGroup("group-pacu-comp-hosp","pacu_comp_hosp",["Unplanned Hospital","Unplanned ICU admission","Death"],"checkbox");
+buildChoiceGroup("group-pacu-comp-misc","pacu_comp_misc",["Sore throat","Hypothermia","Erythema/Rash/Urticaria","Nausea/vomiting","Shivering","Dental injury","Urinary retention","Fever","Subcutaneous emphysema","Blurred vision"],"checkbox");
+buildChoiceGroup("group-pacu-comp-other","pacu_comp_other",["Equipment malfunction/failure","Drug error","Other"],"checkbox");
+
+// ---------- 24h follow up ----------
+buildChoiceGroup("group-followup24","followup24",["เยี่ยมไม่พบปัญหา","ผู้ป่วยกลับบ้าน","เยี่ยมผู้ป่วยให้ข้อมูลไม่ได้","เยี่ยมพบภาวะแทรกซ้อนทางวิสัญญีหลังผ่าตัด 24 ชั่วโมง"],"radio");
+document.querySelectorAll('input[name="followup24"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const needsDetail = document.querySelector('input[name="followup24"][value="เยี่ยมพบภาวะแทรกซ้อนทางวิสัญญีหลังผ่าตัด 24 ชั่วโมง"]').checked;
+    document.getElementById("followup24RequiredNote").style.display = needsDetail ? "inline" : "none";
+    document.getElementById("followup24_detail").required = needsDetail;
+  });
+});
+
+// ---------- perianesthesia problems ----------
+buildChoiceGroup("group-perianesthesia-problems","perianesthesia_problems",["เจ็บ","กลัว/กังวล","คลื่นไส้/อาเจียน","หนาวสั่น","อึดอัดหายใจลำบาก","เมื่อยต้องการเปลี่ยนอิริยาบถ","ปวดศีรษะ","เจ็บระหว่างผ่าตัด","อื่นๆ"],"checkbox");
+
+// ---------- postop problems ----------
+buildChoiceGroup("group-postop-problems","postop_problems",["เจ็บคอ","หนาวสั่น","คลื่นไส้/อาเจียน","ปวดหลัง","ปวดเมื่อย","ปวดศีรษะ","เวียนศีรษะ","คัน","ปัสสาวะไม่ออก","ปวดแผล","ผิวหนังมีรอยแดง/ไหม้","ชา/อ่อนแรงเนื่องจากการจัดท่า","ไข้","อื่นๆ"],"checkbox");
+
+// ---------- service satisfaction ----------
+buildChoiceGroup("group-service-satisfaction","service_satisfaction",["ดีมาก","ดี","ปานกลาง","พอใช้","ควรปรับปรุง"],"radio");
+
+// ---------- Awareness class conditional ----------
+document.querySelectorAll('input[name="awareness"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const isYes = document.querySelector('input[name="awareness"][value="Yes"]').checked;
+    document.getElementById("awareness-class-wrap").style.display = isYes ? "flex" : "none";
+  });
+});
+
+// ---------- Postop problems: conditional skin/numbness detail ----------
+document.querySelectorAll('input[name="postop_problems[]"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const checked = Array.from(document.querySelectorAll('input[name="postop_problems[]"]:checked')).map(c=>c.value);
+    document.getElementById("skin-detail-wrap").style.display = checked.includes("ผิวหนังมีรอยแดง/ไหม้") ? "flex" : "none";
+    document.getElementById("numbness-detail-wrap").style.display = checked.includes("ชา/อ่อนแรงเนื่องจากการจัดท่า") ? "flex" : "none";
+  });
+});
+
+// ---------- Buddhist-era (พ.ศ.) DD/MM/YYYY date field builder ----------
+const THAI_MONTHS = ["มกราคม","กุมภาพันธ์","มีนาคม","เมษายน","พฤษภาคม","มิถุนายน","กรกฎาคม","สิงหาคม","กันยายน","ตุลาคม","พฤศจิกายน","ธันวาคม"];
+function todayBEYear(){ return new Date().getFullYear() + 543; }
+
+function buildDateField(containerId, prefix, {yearsBack=100, yearsForward=1, onChange=null}={}){
+  const el = document.getElementById(containerId);
+  if(!el) return;
+  el.classList.add("row");
+  el.style.gap = "6px";
+
+  const daySel = document.createElement("select");
+  daySel.name = prefix + "_day";
+  daySel.appendChild(new Option("วัน",""));
+  for(let d=1; d<=31; d++) daySel.appendChild(new Option(String(d).padStart(2,"0"), d));
+
+  const monthSel = document.createElement("select");
+  monthSel.name = prefix + "_month";
+  monthSel.appendChild(new Option("เดือน",""));
+  THAI_MONTHS.forEach((m,i)=> monthSel.appendChild(new Option(m, i+1)));
+
+  const yearSel = document.createElement("select");
+  yearSel.name = prefix + "_year";
+  yearSel.appendChild(new Option("ปี พ.ศ.",""));
+  const by = todayBEYear();
+  const startY = by - yearsBack, endY = by + yearsForward;
+  for(let y=endY; y>=startY; y--) yearSel.appendChild(new Option(y, y));
+
+  [daySel, monthSel, yearSel].forEach(sel=>{
+    sel.style.flex = "1";
+    el.appendChild(sel);
+    if(onChange) sel.addEventListener("change", onChange);
+  });
+
+  return {daySel, monthSel, yearSel};
+}
+
+function getDateTripletValue(prefix){
+  const d = document.querySelector(`[name="${prefix}_day"]`).value;
+  const m = document.querySelector(`[name="${prefix}_month"]`).value;
+  const y = document.querySelector(`[name="${prefix}_year"]`).value;
+  if(!d || !m || !y) return "";
+  return `${d.padStart(2,"0")}/${m.padStart(2,"0")}/${y}`;
+}
+
+buildDateField("date-dob", "dob", { yearsBack: 100, yearsForward: 0, onChange: recalcAge });
+buildDateField("date-op_date", "op_date", { yearsBack: 2, yearsForward: 1 });
+buildDateField("date-visit_date", "visit_date", { yearsBack: 2, yearsForward: 1 });
+
+// ---------- Age auto-calc (from BE DOB) ----------
+function recalcAge(){
+  const d = document.querySelector('[name="dob_day"]').value;
+  const m = document.querySelector('[name="dob_month"]').value;
+  const y = document.querySelector('[name="dob_year"]').value;
+  if(!d || !m || !y){ document.getElementById("age").value = ""; return; }
+  const ceYear = parseInt(y,10) - 543;
+  const dob = new Date(ceYear, parseInt(m,10)-1, parseInt(d,10));
+  if(isNaN(dob)){ document.getElementById("age").value = ""; return; }
+  const diff = Date.now() - dob.getTime();
+  const age = Math.floor(diff / (1000*60*60*24*365.25));
+  document.getElementById("age").value = (age >= 0 ? age : 0) + " ปี";
+}
+
+// ---------- Time duration auto-calc ----------
+function timeToMin(t){
+  if(!t) return null;
+  const [h,m] = t.split(":").map(Number);
+  return h*60+m;
+}
+function diffMin(a,b){
+  if(a===null||b===null) return null;
+  let d = b - a;
+  if(d < 0) d += 24*60; // crossed midnight
+  return d;
+}
+function recalcDurations(){
+  const f = n => document.querySelector(`[name=${n}]`).value;
+  const toOR = timeToMin(f("t_to_or"));
+  const start = timeToMin(f("t_start"));
+  const stop = timeToMin(f("t_stop"));
+  const incision = timeToMin(f("t_incision"));
+  const transfer = timeToMin(f("t_transfer"));
+  const abo = timeToMin(f("t_abo"));
+
+  const totalAnes = diffMin(start, stop);
+  const opTime = diffMin(start, stop);
+  const aboTime = diffMin(abo, incision);
+
+  document.getElementById("calcTotalAnes").textContent = totalAnes ?? "—";
+  document.getElementById("calcOpTime").textContent = opTime ?? "—";
+  document.getElementById("calcAboTime").textContent = aboTime ?? "—";
+}
+document.querySelectorAll(".timecalc").forEach(inp=>inp.addEventListener("change", recalcDurations));
+
+// ---------- Reset ----------
+document.getElementById("resetBtn").addEventListener("click", ()=>{
+  if(confirm("ล้างข้อมูลทั้งหมดในฟอร์ม?")){
+    document.getElementById("anesForm").reset();
+    document.getElementById("age").value = "";
+    document.getElementById("bmi").value = "";
+    document.getElementById("ward-opd-wrap").style.display = "none";
+    document.getElementById("ward-ipd-wrap").style.display = "none";
+    document.getElementById("followup24RequiredNote").style.display = "none";
+    document.getElementById("followup24_detail").required = false;
+    recalcDurations();
+    document.getElementById("statusMsg").textContent = "";
+  }
+});
+
+// ---------- Submit ----------
+document.getElementById("anesForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  const statusEl = document.getElementById("statusMsg");
+  const submitBtn = document.getElementById("submitBtn");
+
+  if(GOOGLE_SCRIPT_URL.indexOf("PASTE_YOUR_WEB_APP_URL_HERE") !== -1){
+    statusEl.className = "err";
+    statusEl.textContent = "⚠ ยังไม่ได้ตั้งค่า Google Sheet — ดูคู่มือในแท็บ \"คู่มือตั้งค่า\"";
+    return;
+  }
+
+  if(!this.reportValidity()){
+    statusEl.className = "err";
+    statusEl.textContent = "⚠ กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (เช่น รายละเอียดภาวะแทรกซ้อน 24 ชม.)";
+    return;
+  }
+
+  const formData = new FormData(this);
+  const data = {};
+  const dateKeyPattern = /^(dob|op_date|visit_date)_(day|month|year)$/;
+  for(const [key, val] of formData.entries()){
+    if(dateKeyPattern.test(key)) continue; // combined separately below
+    const cleanKey = key.endsWith("[]") ? key.slice(0,-2) : key;
+    if(key.endsWith("[]")){
+      data[cleanKey] = data[cleanKey] ? data[cleanKey] + "; " + val : val;
+    } else {
+      data[cleanKey] = val;
+    }
+  }
+  data["dob"] = getDateTripletValue("dob");
+  data["op_date"] = getDateTripletValue("op_date");
+  data["visit_date"] = getDateTripletValue("visit_date");
+  data["calc_total_anes_min"] = document.getElementById("calcTotalAnes").textContent;
+  data["calc_op_time_min"] = document.getElementById("calcOpTime").textContent;
+  data["calc_abo_time_min"] = document.getElementById("calcAboTime").textContent;
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = "กำลังบันทึก...";
+  statusEl.className = "";
+  statusEl.textContent = "";
+
+  try{
+    await fetch(GOOGLE_SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(data)
+    });
+    statusEl.className = "ok";
+    statusEl.textContent = "✔ ส่งข้อมูลไปยัง Google Sheet แล้ว (ตรวจสอบแถวใหม่ใน Sheet เพื่อยืนยัน)";
+  }catch(err){
+    statusEl.className = "err";
+    statusEl.textContent = "✖ เกิดข้อผิดพลาดในการส่งข้อมูล: " + err.message;
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = "บันทึกข้อมูล → Google Sheet";
+  }
+});
+</script>
+</body>
+</html>
