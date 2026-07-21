@@ -532,10 +532,14 @@
       sheet.appendRow(newRow);
       targetRow = sheet.getLastRow();
     } else {
-      // existing row for this HN + op_date -> update only the columns sent in this request
+      // existing row for this HN + op_date -> update only columns sent in this request,
+      // but skip any key whose new value is blank so it doesn't erase previously saved data
       Object.keys(data).forEach(function(k) {
         var colIdx = headers.indexOf(k);
-        if (colIdx !== -1) sheet.getRange(targetRow, colIdx + 1).setValue(data[k]);
+        if (colIdx === -1) return;
+        var newVal = data[k];
+        if (newVal === "" || newVal === null || newVal === undefined) return; // keep existing value
+        sheet.getRange(targetRow, colIdx + 1).setValue(newVal);
       });
       var luCol = headers.indexOf("LastUpdated");
       sheet.getRange(targetRow, luCol + 1).setValue(new Date());
@@ -558,6 +562,7 @@
         <li>ถ้าเคย deploy ไว้แล้วและแค่แก้โค้ด ต้องกด Deploy → Manage deployments → ไอคอนดินสอ → เปลี่ยนเป็น <b>New version</b> → Deploy (URL เดิมยังใช้ได้ ไม่ต้องแก้ไฟล์ HTML ใหม่)</li>
       </ol>
       <p style="font-size:12.5px;color:var(--muted);"><b>วิธีจับคู่ Intraop กับ Postop เป็นแถวเดียวกัน:</b> ฟอร์มนี้แยกปุ่มบันทึกเป็น 2 ปุ่ม (Intraoperative / Postoperative) โดยใช้ <b>HN + วันที่ผ่าตัด</b> ที่อยู่บนสุดของหน้าเป็นตัวจับคู่ร่วมกัน — กรอกทั้งสองช่องนี้ให้ตรงกันทุกครั้ง แล้วกดปุ่มไหนก็ได้ ระบบจะค้นหาแถวที่มี HN และวันที่ผ่าตัดตรงกันอยู่แล้วใน Sheet แล้วเติมข้อมูลลงคอลัมน์ที่เกี่ยวข้องในแถวนั้นแทนการสร้างแถวใหม่ ถ้ายังไม่มีคู่ HN + วันที่นี้ในชีทมาก่อน ระบบจะสร้างแถวใหม่ให้อัตโนมัติ — ผู้ป่วยที่มาผ่าตัดหลายครั้ง (HN เดิม แต่คนละวัน) จะได้แถวแยกกันอย่างถูกต้อง</p>
+      <p style="font-size:12.5px;color:var(--muted);"><b>ถ้าบันทึกซ้ำด้วย HN + วันที่เดิม:</b> ค่าที่กรอกใหม่จะทับค่าเดิมในคอลัมน์นั้นๆ เสมอ (ถือว่าค่าล่าสุดถูกต้องที่สุด) <b>ยกเว้น</b>ถ้าการบันทึกครั้งใหม่ปล่อยช่องไหนว่างไว้ ระบบจะ<b>คงค่าเดิมที่เคยกรอกไว้ในชีทไว้ ไม่ลบทิ้ง</b> — ป้องกันกรณีเผลอบันทึกซ้ำแล้วช่องที่เคยกรอกไว้หายไปโดยไม่ตั้งใจ (คอลัมน์ LastUpdated จะอัปเดตทุกครั้งที่มีการบันทึกทับ ใช้เช็คว่าแถวไหนถูกแก้ไขล่าสุดเมื่อไหร่ได้)</p>
       <p style="font-size:12.5px;color:var(--muted);">หมายเหตุ: เพราะเป็นการส่งข้อมูลแบบ <code>no-cors</code> จึงไม่สามารถอ่านผลลัพธ์ตอบกลับได้โดยตรงจากฟอร์ม — ระบบจะแจ้งว่า "ส่งข้อมูลแล้ว" เมื่อคำขอถูกส่งสำเร็จ แนะนำให้เปิด Google Sheet ทิ้งไว้เพื่อตรวจสอบว่าแถวข้อมูลเข้ามาจริง</p>
       <p style="font-size:12.5px;color:var(--muted);">หมายเหตุ: เพราะเป็นการส่งข้อมูลแบบ <code>no-cors</code> จึงไม่สามารถอ่านผลลัพธ์ตอบกลับได้โดยตรงจากฟอร์ม — ระบบจะแจ้งว่า "ส่งข้อมูลแล้ว" เมื่อคำขอถูกส่งสำเร็จ แนะนำให้เปิด Google Sheet ทิ้งไว้เพื่อตรวจสอบว่าแถวข้อมูลเข้ามาจริง</p>
     </div>
