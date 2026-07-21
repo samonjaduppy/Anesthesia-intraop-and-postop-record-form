@@ -17,6 +17,9 @@
   header p{margin:4px 0 0;font-size:13px;opacity:.85;}
   .wrap{max-width:920px;margin:0 auto;padding:20px 16px 80px;}
   .tabbar{display:flex;gap:8px;position:sticky;top:0;background:var(--bg);padding:12px 0;z-index:5;}
+  .hn-bar{position:sticky;top:0;background:#fff3d6;border:1px solid #e6c46a;border-radius:10px;padding:10px 14px;margin:14px 0 0;z-index:6;}
+  .hn-bar label{display:block;font-size:11.5px;font-weight:700;color:#7a5b12;margin-bottom:5px;}
+  .hn-bar input{width:100%;max-width:320px;padding:8px 10px;border:1px solid #e6c46a;border-radius:8px;font-size:15px;font-weight:700;background:#fff;}
   .tabbar button{flex:1;padding:12px;border:none;border-radius:10px;background:#e2e9ee;color:var(--navy);font-weight:600;font-size:14px;cursor:pointer;}
   .tabbar button.active{background:var(--navy);color:#fff;}
   section.panel{display:none;}
@@ -66,6 +69,17 @@
     ✅ <b>เชื่อมกับ Google Sheet เรียบร้อยแล้ว</b> — เมื่อกด "บันทึกข้อมูล" ข้อมูลจะถูกส่งเข้า Google Sheet ที่ตั้งค่าไว้โดยอัตโนมัติ
   </div>
 
+  <div class="hn-bar">
+    <label for="hnKeyInput">HN + วันที่ผ่าตัด (ใช้จับคู่ข้อมูลกับแถวเดิมใน Google Sheet — กรอกทุกครั้งไม่ว่าจะบันทึกส่วน Intraop หรือ Postop)</label>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
+      <input type="text" id="hnKeyInput" name="hn" placeholder="กรอก HN ผู้ป่วย" form="anesForm" style="max-width:200px;">
+      <div>
+        <label style="margin-bottom:3px;">วันที่ผ่าตัด (วว/ดด/ปปปป พ.ศ.)</label>
+        <div id="date-op_date"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="tabbar">
     <button class="tab-btn active" data-tab="intraop">Intraoperative</button>
     <button class="tab-btn" data-tab="postop">Postoperative</button>
@@ -80,7 +94,6 @@
     <div class="card">
       <h2>ข้อมูลผู้ป่วย / Patient Info</h2>
       <div class="row">
-        <div class="field"><label>HN</label><input type="text" name="hn"></div>
         <div class="field wide"><label>Name</label><input type="text" name="name"></div>
       </div>
       <div class="subgroup">
@@ -120,7 +133,6 @@
         <div class="field wide"><label>Operation</label><input type="text" name="operation"></div>
       </div>
       <div class="row">
-        <div class="field"><label>Date (วว/ดด/ปปปป พ.ศ.)</label><div id="date-op_date"></div></div>
         <div class="field"><label>Surgeon</label><input type="text" name="surgeon"></div>
         <div class="field"><label>Allergy</label><input type="text" name="allergy"></div>
       </div>
@@ -468,39 +480,98 @@
         <li>สร้าง Google Sheet ใหม่ ตั้งชื่อ เช่น <code>Anesthesia_Intraop_Postop_Data</code></li>
         <li>ไปที่เมนู <b>Extensions → Apps Script</b> แล้วลบโค้ดเดิมทั้งหมด วางโค้ดนี้แทน:</li>
       </ol>
-      <textarea readonly style="min-height:230px;font-family:monospace;font-size:12px;">function doPost(e) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var data = JSON.parse(e.postData.contents);
+      <textarea readonly style="min-height:340px;font-family:monospace;font-size:12px;">function doPost(e) {
+  try {
+    if (!e || !e.postData) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: "No POST data received (ทดสอบด้วยปุ่ม Run ในนี้ไม่ได้ ต้องยิงมาจากฟอร์มจริงเท่านั้น)"
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
 
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(["Timestamp"].concat(Object.keys(data)));
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    var hn = (data["hn"] || "").toString().trim();
+    var opDate = (data["op_date"] || "").toString().trim();
+
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    var headers = lastRow === 0 ? [] : sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+
+    if (headers.indexOf("Timestamp") === -1) headers.unshift("Timestamp");
+    Object.keys(data).forEach(function(k) {
+      if (headers.indexOf(k) === -1) headers.push(k);
+    });
+    if (headers.indexOf("LastUpdated") === -1) headers.push("LastUpdated");
+
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+    var hnCol = headers.indexOf("hn");
+    var opDateCol = headers.indexOf("op_date");
+    var targetRow = -1;
+
+    if (hn && opDate && hnCol !== -1 && opDateCol !== -1 && lastRow > 1) {
+      var hnValues = sheet.getRange(2, hnCol + 1, lastRow - 1, 1).getValues();
+      var opDateValues = sheet.getRange(2, opDateCol + 1, lastRow - 1, 1).getValues();
+      for (var i = hnValues.length - 1; i >= 0; i--) {
+        var rowHn = (hnValues[i][0] || "").toString().trim();
+        var rowOpDate = (opDateValues[i][0] || "").toString().trim();
+        if (rowHn === hn && rowOpDate === opDate) {
+          targetRow = i + 2; // +2: header row + 1-index
+          break;
+        }
+      }
+    }
+
+    if (targetRow === -1) {
+      // no existing row for this HN + op_date -> append new row
+      var newRow = headers.map(function(h) {
+        if (h === "Timestamp" || h === "LastUpdated") return new Date();
+        return data[h] !== undefined ? data[h] : "";
+      });
+      sheet.appendRow(newRow);
+      targetRow = sheet.getLastRow();
+    } else {
+      // existing row for this HN + op_date -> update only the columns sent in this request
+      Object.keys(data).forEach(function(k) {
+        var colIdx = headers.indexOf(k);
+        if (colIdx !== -1) sheet.getRange(targetRow, colIdx + 1).setValue(data[k]);
+      });
+      var luCol = headers.indexOf("LastUpdated");
+      sheet.getRange(targetRow, luCol + 1).setValue(new Date());
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({status: "success", row: targetRow}))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({status: "error", message: err.message}))
+      .setMimeType(ContentService.MimeType.JSON);
   }
-  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var row = headers.map(function(h) {
-    if (h === "Timestamp") return new Date();
-    return data[h] !== undefined ? data[h] : "";
-  });
-  sheet.appendRow(row);
-
-  return ContentService.createTextOutput(JSON.stringify({status:"success"}))
-    .setMimeType(ContentService.MimeType.JSON);
 }</textarea>
       <ol start="3" style="font-size:13.5px;line-height:1.9;">
         <li>กด <b>Deploy → New deployment</b> → เลือกประเภท <b>Web app</b></li>
         <li>ตั้งค่า <b>Execute as: Me</b> และ <b>Who has access: Anyone</b> แล้วกด Deploy</li>
         <li>คัดลอก <b>Web app URL</b> ที่ได้</li>
         <li>เปิดไฟล์ HTML นี้ด้วยโปรแกรมแก้ไขข้อความ ค้นหา <code>GOOGLE_SCRIPT_URL</code> แล้ววาง URL ที่คัดลอกแทนที่ <code>"PASTE_YOUR_WEB_APP_URL_HERE"</code></li>
-        <li>บันทึกไฟล์ แล้วเปิดฟอร์มใหม่อีกครั้ง — เมื่อกด "บันทึกข้อมูล" ข้อมูลจะถูกส่งไปเพิ่มเป็นแถวใหม่ใน Sheet โดยอัตโนมัติ</li>
+        <li>บันทึกไฟล์ แล้วเปิดฟอร์มใหม่อีกครั้ง</li>
+        <li>ถ้าเคย deploy ไว้แล้วและแค่แก้โค้ด ต้องกด Deploy → Manage deployments → ไอคอนดินสอ → เปลี่ยนเป็น <b>New version</b> → Deploy (URL เดิมยังใช้ได้ ไม่ต้องแก้ไฟล์ HTML ใหม่)</li>
       </ol>
+      <p style="font-size:12.5px;color:var(--muted);"><b>วิธีจับคู่ Intraop กับ Postop เป็นแถวเดียวกัน:</b> ฟอร์มนี้แยกปุ่มบันทึกเป็น 2 ปุ่ม (Intraoperative / Postoperative) โดยใช้ <b>HN + วันที่ผ่าตัด</b> ที่อยู่บนสุดของหน้าเป็นตัวจับคู่ร่วมกัน — กรอกทั้งสองช่องนี้ให้ตรงกันทุกครั้ง แล้วกดปุ่มไหนก็ได้ ระบบจะค้นหาแถวที่มี HN และวันที่ผ่าตัดตรงกันอยู่แล้วใน Sheet แล้วเติมข้อมูลลงคอลัมน์ที่เกี่ยวข้องในแถวนั้นแทนการสร้างแถวใหม่ ถ้ายังไม่มีคู่ HN + วันที่นี้ในชีทมาก่อน ระบบจะสร้างแถวใหม่ให้อัตโนมัติ — ผู้ป่วยที่มาผ่าตัดหลายครั้ง (HN เดิม แต่คนละวัน) จะได้แถวแยกกันอย่างถูกต้อง</p>
+      <p style="font-size:12.5px;color:var(--muted);">หมายเหตุ: เพราะเป็นการส่งข้อมูลแบบ <code>no-cors</code> จึงไม่สามารถอ่านผลลัพธ์ตอบกลับได้โดยตรงจากฟอร์ม — ระบบจะแจ้งว่า "ส่งข้อมูลแล้ว" เมื่อคำขอถูกส่งสำเร็จ แนะนำให้เปิด Google Sheet ทิ้งไว้เพื่อตรวจสอบว่าแถวข้อมูลเข้ามาจริง</p>
       <p style="font-size:12.5px;color:var(--muted);">หมายเหตุ: เพราะเป็นการส่งข้อมูลแบบ <code>no-cors</code> จึงไม่สามารถอ่านผลลัพธ์ตอบกลับได้โดยตรงจากฟอร์ม — ระบบจะแจ้งว่า "ส่งข้อมูลแล้ว" เมื่อคำขอถูกส่งสำเร็จ แนะนำให้เปิด Google Sheet ทิ้งไว้เพื่อตรวจสอบว่าแถวข้อมูลเข้ามาจริง</p>
     </div>
   </section>
 
   <div class="footer-actions">
     <button type="button" class="btn btn-secondary" id="resetBtn">ล้างฟอร์ม</button>
-    <button type="submit" class="btn btn-primary" id="submitBtn">บันทึกข้อมูล → Google Sheet</button>
+    <button type="button" class="btn btn-primary" id="submitIntraopBtn">บันทึก Intraoperative → Google Sheet</button>
+    <button type="button" class="btn btn-primary" id="submitPostopBtn">บันทึก Postoperative → Google Sheet</button>
   </div>
   <div id="statusMsg"></div>
+  <p style="font-size:12px;color:var(--muted);text-align:center;margin-top:4px;">
+    ใช้ HN เดียวกันด้านบนเป็นตัวจับคู่ — ถ้ามีแถวของ HN นี้อยู่แล้วใน Google Sheet ระบบจะเติมข้อมูลลงแถวเดิม ไม่สร้างแถวใหม่ซ้ำ
+  </p>
 
   </form>
 </div>
@@ -906,6 +977,11 @@ document.querySelectorAll(".timecalc").forEach(inp=>inp.addEventListener("change
 document.getElementById("resetBtn").addEventListener("click", ()=>{
   if(confirm("ล้างข้อมูลทั้งหมดในฟอร์ม?")){
     document.getElementById("anesForm").reset();
+    document.getElementById("hnKeyInput").value = "";
+    ["op_date_day","op_date_month","op_date_year"].forEach(n=>{
+      const el = document.querySelector(`[name="${n}"]`);
+      if(el) el.value = "";
+    });
     document.getElementById("age").value = "";
     document.getElementById("bmi").value = "";
     document.getElementById("ward-opd-wrap").style.display = "none";
@@ -917,11 +993,55 @@ document.getElementById("resetBtn").addEventListener("click", ()=>{
   }
 });
 
-// ---------- Submit ----------
-document.getElementById("anesForm").addEventListener("submit", async function(e){
-  e.preventDefault();
+// ---------- Section-scoped data collection ----------
+const DATE_KEY_PATTERN = /^(dob|op_date|visit_date)_(day|month|year)$/;
+
+function collectSectionData(panelId, extraDateFields){
+  const panel = document.getElementById(panelId);
+  const data = {};
+  const controls = panel.querySelectorAll("input, select, textarea");
+  controls.forEach(ctrl=>{
+    if(!ctrl.name) return;
+    if(DATE_KEY_PATTERN.test(ctrl.name)) return; // combined separately below
+    if(ctrl.type === "radio" || ctrl.type === "checkbox"){
+      if(!ctrl.checked) return;
+    }
+    const cleanKey = ctrl.name.endsWith("[]") ? ctrl.name.slice(0,-2) : ctrl.name;
+    const val = ctrl.value;
+    if(ctrl.name.endsWith("[]")){
+      data[cleanKey] = data[cleanKey] ? data[cleanKey] + "; " + val : val;
+    } else {
+      data[cleanKey] = val;
+    }
+  });
+  (extraDateFields || []).forEach(prefix=>{
+    const v = getDateTripletValue(prefix);
+    if(v) data[prefix] = v;
+  });
+  return data;
+}
+
+function findRequiredInvalid(panelId){
+  const panel = document.getElementById(panelId);
+  return Array.from(panel.querySelectorAll("[required]")).find(el => !el.checkValidity()) || null;
+}
+
+async function submitSection({panelId, extraDateFields, extraData, buttonEl, defaultLabel}){
   const statusEl = document.getElementById("statusMsg");
-  const submitBtn = document.getElementById("submitBtn");
+
+  const hn = document.getElementById("hnKeyInput").value.trim();
+  const opDate = getDateTripletValue("op_date");
+  if(!hn){
+    statusEl.className = "err";
+    statusEl.textContent = "⚠ กรุณากรอก HN ก่อนบันทึก (ใช้จับคู่ข้อมูลกับแถวเดิมใน Google Sheet)";
+    document.getElementById("hnKeyInput").focus();
+    return;
+  }
+  if(!opDate){
+    statusEl.className = "err";
+    statusEl.textContent = "⚠ กรุณาเลือกวันที่ผ่าตัดก่อนบันทึก (ใช้จับคู่ข้อมูลร่วมกับ HN)";
+    return;
+  }
 
   if(GOOGLE_SCRIPT_URL.indexOf("PASTE_YOUR_WEB_APP_URL_HERE") !== -1){
     statusEl.className = "err";
@@ -929,33 +1049,21 @@ document.getElementById("anesForm").addEventListener("submit", async function(e)
     return;
   }
 
-  if(!this.reportValidity()){
+  const invalidField = findRequiredInvalid(panelId);
+  if(invalidField){
     statusEl.className = "err";
     statusEl.textContent = "⚠ กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (เช่น รายละเอียดภาวะแทรกซ้อน 24 ชม.)";
+    invalidField.focus();
     return;
   }
 
-  const formData = new FormData(this);
-  const data = {};
-  const dateKeyPattern = /^(dob|op_date|visit_date)_(day|month|year)$/;
-  for(const [key, val] of formData.entries()){
-    if(dateKeyPattern.test(key)) continue; // combined separately below
-    const cleanKey = key.endsWith("[]") ? key.slice(0,-2) : key;
-    if(key.endsWith("[]")){
-      data[cleanKey] = data[cleanKey] ? data[cleanKey] + "; " + val : val;
-    } else {
-      data[cleanKey] = val;
-    }
-  }
-  data["dob"] = getDateTripletValue("dob");
-  data["op_date"] = getDateTripletValue("op_date");
-  data["visit_date"] = getDateTripletValue("visit_date");
-  data["calc_total_anes_min"] = document.getElementById("calcTotalAnes").textContent;
-  data["calc_op_time_min"] = document.getElementById("calcOpTime").textContent;
-  data["calc_abo_time_min"] = document.getElementById("calcAboTime").textContent;
+  const data = collectSectionData(panelId, extraDateFields);
+  data["hn"] = hn;
+  data["op_date"] = opDate;
+  Object.assign(data, extraData || {});
 
-  submitBtn.disabled = true;
-  submitBtn.textContent = "กำลังบันทึก...";
+  buttonEl.disabled = true;
+  buttonEl.textContent = "กำลังบันทึก...";
   statusEl.className = "";
   statusEl.textContent = "";
 
@@ -967,14 +1075,38 @@ document.getElementById("anesForm").addEventListener("submit", async function(e)
       body: JSON.stringify(data)
     });
     statusEl.className = "ok";
-    statusEl.textContent = "✔ ส่งข้อมูลไปยัง Google Sheet แล้ว (ตรวจสอบแถวใหม่ใน Sheet เพื่อยืนยัน)";
+    statusEl.textContent = "✔ ส่งข้อมูลไปยัง Google Sheet แล้ว (HN " + hn + " · " + opDate + ") — ตรวจสอบแถวใน Sheet เพื่อยืนยัน";
   }catch(err){
     statusEl.className = "err";
     statusEl.textContent = "✖ เกิดข้อผิดพลาดในการส่งข้อมูล: " + err.message;
   }finally{
-    submitBtn.disabled = false;
-    submitBtn.textContent = "บันทึกข้อมูล → Google Sheet";
+    buttonEl.disabled = false;
+    buttonEl.textContent = defaultLabel;
   }
+}
+
+document.getElementById("submitIntraopBtn").addEventListener("click", function(){
+  submitSection({
+    panelId: "panel-intraop",
+    extraDateFields: ["dob"],
+    extraData: {
+      calc_total_anes_min: document.getElementById("calcTotalAnes").textContent,
+      calc_op_time_min: document.getElementById("calcOpTime").textContent,
+      calc_abo_time_min: document.getElementById("calcAboTime").textContent
+    },
+    buttonEl: this,
+    defaultLabel: "บันทึก Intraoperative → Google Sheet"
+  });
+});
+
+document.getElementById("submitPostopBtn").addEventListener("click", function(){
+  submitSection({
+    panelId: "panel-postop",
+    extraDateFields: ["visit_date"],
+    extraData: {},
+    buttonEl: this,
+    defaultLabel: "บันทึก Postoperative → Google Sheet"
+  });
 });
 </script>
 </body>
