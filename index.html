@@ -77,7 +77,9 @@
         <label style="margin-bottom:3px;">วันที่ผ่าตัด (วว/ดด/ปปปป พ.ศ.)</label>
         <div id="date-op_date"></div>
       </div>
+      <button type="button" id="loadExistingBtn" class="btn btn-secondary" style="padding:9px 14px;font-size:13px;">🔍 ค้นหาข้อมูลเดิม</button>
     </div>
+    <div id="loadStatusMsg" style="font-size:12px;color:#7a5b12;margin-top:6px;"></div>
   </div>
 
   <div class="tabbar">
@@ -126,7 +128,7 @@
         <div class="field"><label>BMI (auto)</label><input type="text" name="bmi" id="bmi" readonly></div>
       </div>
       <div class="row">
-        <div class="field wide"><label>Hb (g/dL) / Hct (%)</label><input type="text" name="hb_hct"></div>
+        <div class="field wide"><label>Hb (g/dL)</label><input type="text" name="hb"></div>
       </div>
       <div class="row">
         <div class="field wide"><label>Diagnosis</label><input type="text" name="diagnosis"></div>
@@ -287,17 +289,19 @@
     <div class="card">
       <h2>Airway</h2>
       <div class="subgroup">
-        <div class="label">Laryngoscopic view</div>
-        <div id="group-airway-view"></div>
-      </div>
-      <div class="subgroup">
         <div class="label">Type</div>
         <div id="group-airway-type"></div>
-        <div class="row">
-          <div class="field"><label>Size</label><input type="text" name="airway_size"></div>
-          <div class="field"><label>Depth (cm)</label><input type="text" name="airway_depth"></div>
+        <div class="row" id="airway-type-other-wrap" style="display:none;">
           <div class="field wide"><label>Other type detail</label><input type="text" name="airway_type_other"></div>
         </div>
+        <div class="row">
+          <div class="field"><label>Size</label><input type="text" name="airway_size"></div>
+          <div class="field" id="airway-depth-wrap" style="display:none;"><label>Depth (cm)</label><input type="text" name="airway_depth"></div>
+        </div>
+      </div>
+      <div class="subgroup" id="airway-view-wrap" style="display:none;">
+        <div class="label">Laryngoscopic view</div>
+        <div id="group-airway-view"></div>
       </div>
       <div class="subgroup">
         <div class="label">Intubation technique</div>
@@ -336,6 +340,16 @@
         <div class="field"><label>Transfer</label><input type="time" name="t_transfer" class="timecalc"></div>
         <div class="field"><label>Antibiotic start</label><input type="time" name="t_abo" class="timecalc"></div>
       </div>
+      <div class="row">
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400;">
+            <input type="checkbox" id="redoseAboCheckbox" name="redose_antibiotic" value="Yes"> Redose antibiotic
+          </label>
+        </div>
+        <div class="field" id="redose-abo-time-wrap" style="display:none;">
+          <label>เวลา Redose antibiotic</label>
+          <input type="time" name="t_redose_abo">
+        </div>
       <div class="calc-box">
         Total Anes time: <b id="calcTotalAnes">—</b> min &nbsp;|&nbsp;
         Op time: <b id="calcOpTime">—</b> min &nbsp;|&nbsp;
@@ -343,8 +357,13 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="intraop-complications-card">
       <h2>ภาวะแทรกซ้อนทางวิสัญญีระหว่างผ่าตัด</h2>
+      <div class="subgroup">
+        <label style="display:flex;align-items:center;gap:6px;background:#eef6f0;padding:8px 12px;border-radius:20px;font-weight:600;color:#255c3f;width:fit-content;">
+          <input type="checkbox" id="noCompIntraopCheckbox" name="no_complications_intraop" value="Yes"> ไม่มีภาวะแทรกซ้อน
+        </label>
+      </div>
       <div class="subgroup"><div class="label">Intubation associated</div><div id="group-comp-intubation"></div></div>
       <div class="subgroup"><div class="label">Regional anesthesia associated</div><div id="group-comp-ra"></div></div>
       <div class="subgroup"><div class="label">Cardiovascular</div><div id="group-comp-cv"></div></div>
@@ -370,7 +389,13 @@
       <h2>ทีมวิสัญญี</h2>
       <div class="row">
         <div class="field wide"><label>Anesthesiologist</label><div id="select-anesthesiologist"></div></div>
-        <div class="field wide"><label>Nurse anesthetist</label><div id="select-nurse-anesthetist"></div></div>
+        <div class="field wide">
+          <label>Nurse anesthetist</label>
+          <div id="select-nurse-anesthetist"></div>
+          <div id="nurse-anesthetist-other-wrap" style="display:none;margin-top:6px;">
+            <input type="text" name="nurse_anesthetist_other_detail" placeholder="ระบุชื่อ">
+          </div>
+        </div>
       </div>
     </div>
 
@@ -379,8 +404,13 @@
   <!-- =================== POSTOP =================== -->
   <section class="panel" id="panel-postop">
 
-    <div class="card">
+    <div class="card" id="pacu-complications-card">
       <h2>ภาวะแทรกซ้อนทางวิสัญญีในห้องพักฟื้น</h2>
+      <div class="subgroup">
+        <label style="display:flex;align-items:center;gap:6px;background:#eef6f0;padding:8px 12px;border-radius:20px;font-weight:600;color:#255c3f;width:fit-content;">
+          <input type="checkbox" id="noCompPacuCheckbox" name="no_complications_pacu" value="Yes"> ไม่มีภาวะแทรกซ้อน
+        </label>
+      </div>
       <div class="subgroup"><div class="label">Intubation associated</div><div id="group-pacu-comp-intubation"></div></div>
       <div class="subgroup"><div class="label">Cardiovascular</div><div id="group-pacu-comp-cv"></div></div>
       <div class="subgroup"><div class="label">Neurological</div><div id="group-pacu-comp-neuro"></div></div>
@@ -466,7 +496,13 @@
       <h2>การเยี่ยมหลังผ่าตัด</h2>
       <div class="row">
         <div class="field"><label>วันที่เยี่ยม (วว/ดด/ปปปป พ.ศ.)</label><div id="date-visit_date"></div></div>
-        <div class="field wide"><label>พยาบาลเยี่ยมหลังผ่าตัด</label><div id="select-visit-nurse"></div></div>
+        <div class="field wide">
+          <label>พยาบาลเยี่ยมหลังผ่าตัด</label>
+          <div id="select-visit-nurse"></div>
+          <div id="visit-nurse-other-wrap" style="display:none;margin-top:6px;">
+            <input type="text" name="visit_nurse_other_detail" placeholder="ระบุชื่อ">
+          </div>
+        </div>
       </div>
     </div>
 
@@ -552,6 +588,58 @@
     return ContentService.createTextOutput(JSON.stringify({status: "error", message: err.message}))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+function doGet(e) {
+  try {
+    var hn = ((e && e.parameter && e.parameter.hn) || "").toString().trim();
+    var opDate = ((e && e.parameter && e.parameter.op_date) || "").toString().trim();
+    if (!hn || !opDate) {
+      return ContentService.createTextOutput(JSON.stringify({found: false, message: "Missing hn or op_date"}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var lastRow = sheet.getLastRow();
+    var lastCol = sheet.getLastColumn();
+    if (lastRow < 2) {
+      return ContentService.createTextOutput(JSON.stringify({found: false}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    var hnCol = headers.indexOf("hn");
+    var opDateCol = headers.indexOf("op_date");
+    if (hnCol === -1 || opDateCol === -1) {
+      return ContentService.createTextOutput(JSON.stringify({found: false}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var values = sheet.getRange(2, 1, lastRow - 1, lastCol).getValues();
+    for (var i = values.length - 1; i >= 0; i--) {
+      var rowHn = (values[i][hnCol] || "").toString().trim();
+      var rowOpDate = (values[i][opDateCol] || "").toString().trim();
+      if (rowHn === hn && rowOpDate === opDate) {
+        var result = {};
+        headers.forEach(function(h, idx) {
+          var v = values[i][idx];
+          if (Object.prototype.toString.call(v) === "[object Date]") {
+            v = Utilities.formatDate(v, Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
+          }
+          result[h] = v;
+        });
+        return ContentService.createTextOutput(JSON.stringify({found: true, data: result}))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    return ContentService.createTextOutput(JSON.stringify({found: false}))
+      .setMimeType(ContentService.MimeType.JSON);
+
+  } catch (err) {
+    return ContentService.createTextOutput(JSON.stringify({found: false, error: err.message}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }</textarea>
       <ol start="3" style="font-size:13.5px;line-height:1.9;">
         <li>กด <b>Deploy → New deployment</b> → เลือกประเภท <b>Web app</b></li>
@@ -562,6 +650,7 @@
         <li>ถ้าเคย deploy ไว้แล้วและแค่แก้โค้ด ต้องกด Deploy → Manage deployments → ไอคอนดินสอ → เปลี่ยนเป็น <b>New version</b> → Deploy (URL เดิมยังใช้ได้ ไม่ต้องแก้ไฟล์ HTML ใหม่)</li>
       </ol>
       <p style="font-size:12.5px;color:var(--muted);"><b>วิธีจับคู่ Intraop กับ Postop เป็นแถวเดียวกัน:</b> ฟอร์มนี้แยกปุ่มบันทึกเป็น 2 ปุ่ม (Intraoperative / Postoperative) โดยใช้ <b>HN + วันที่ผ่าตัด</b> ที่อยู่บนสุดของหน้าเป็นตัวจับคู่ร่วมกัน — กรอกทั้งสองช่องนี้ให้ตรงกันทุกครั้ง แล้วกดปุ่มไหนก็ได้ ระบบจะค้นหาแถวที่มี HN และวันที่ผ่าตัดตรงกันอยู่แล้วใน Sheet แล้วเติมข้อมูลลงคอลัมน์ที่เกี่ยวข้องในแถวนั้นแทนการสร้างแถวใหม่ ถ้ายังไม่มีคู่ HN + วันที่นี้ในชีทมาก่อน ระบบจะสร้างแถวใหม่ให้อัตโนมัติ — ผู้ป่วยที่มาผ่าตัดหลายครั้ง (HN เดิม แต่คนละวัน) จะได้แถวแยกกันอย่างถูกต้อง</p>
+      <p style="font-size:12.5px;color:var(--muted);"><b>โหลดข้อมูลที่เคยกรอกไว้กลับมาแก้ต่อ:</b> พอกรอก HN + วันที่ผ่าตัดครบ ระบบจะเช็คกับ Google Sheet ให้อัตโนมัติ (หรือกดปุ่ม "🔍 ค้นหาข้อมูลเดิม" เพื่อเช็คเอง) ถ้าเจอข้อมูลเดิมของคู่นี้จะมี popup ถามว่าต้องการโหลดกลับมาแสดงในฟอร์มไหม กด "ตกลง" แล้วข้อมูลทุกช่องที่เคยกรอกไว้จะเด้งกลับเข้าฟอร์มให้แก้ไขต่อได้ทันที (ฟีเจอร์นี้ต้องมีฟังก์ชัน <code>doGet</code> ในโค้ด Apps Script ด้วย ซึ่งรวมอยู่ในโค้ดด้านบนแล้ว — แค่วางแล้ว deploy เป็น New version ก็ใช้ได้เลย ไม่ต้องตั้งค่าเพิ่ม)</p>
       <p style="font-size:12.5px;color:var(--muted);"><b>ถ้าบันทึกซ้ำด้วย HN + วันที่เดิม:</b> ค่าที่กรอกใหม่จะทับค่าเดิมในคอลัมน์นั้นๆ เสมอ (ถือว่าค่าล่าสุดถูกต้องที่สุด) <b>ยกเว้น</b>ถ้าการบันทึกครั้งใหม่ปล่อยช่องไหนว่างไว้ ระบบจะ<b>คงค่าเดิมที่เคยกรอกไว้ในชีทไว้ ไม่ลบทิ้ง</b> — ป้องกันกรณีเผลอบันทึกซ้ำแล้วช่องที่เคยกรอกไว้หายไปโดยไม่ตั้งใจ (คอลัมน์ LastUpdated จะอัปเดตทุกครั้งที่มีการบันทึกทับ ใช้เช็คว่าแถวไหนถูกแก้ไขล่าสุดเมื่อไหร่ได้)</p>
       <p style="font-size:12.5px;color:var(--muted);">หมายเหตุ: เพราะเป็นการส่งข้อมูลแบบ <code>no-cors</code> จึงไม่สามารถอ่านผลลัพธ์ตอบกลับได้โดยตรงจากฟอร์ม — ระบบจะแจ้งว่า "ส่งข้อมูลแล้ว" เมื่อคำขอถูกส่งสำเร็จ แนะนำให้เปิด Google Sheet ทิ้งไว้เพื่อตรวจสอบว่าแถวข้อมูลเข้ามาจริง</p>
       <p style="font-size:12.5px;color:var(--muted);">หมายเหตุ: เพราะเป็นการส่งข้อมูลแบบ <code>no-cors</code> จึงไม่สามารถอ่านผลลัพธ์ตอบกลับได้โดยตรงจากฟอร์ม — ระบบจะแจ้งว่า "ส่งข้อมูลแล้ว" เมื่อคำขอถูกส่งสำเร็จ แนะนำให้เปิด Google Sheet ทิ้งไว้เพื่อตรวจสอบว่าแถวข้อมูลเข้ามาจริง</p>
@@ -633,7 +722,7 @@ const ANESTHESIOLOGISTS = [
 
 const NURSES_FULLTIME = [
   "นางสาวปาริชาติ ลมอ่อน","นางสาวอาทิตยา ศึกษา","นางสาวณริดา เนตรทิพย์",
-  "นางสาวชฎาพร มาผาบ","นางสาวกมณฑ์พัชญ์ แก้วตา"
+  "นางสาวชฎาพร มาผาบ"
 ];
 const NURSES_PARTTIME = [
   "นางสาวเอมอร ดอนเช้า","นางสาวเกศศิรินทร์ ธีระสวัสดิ์","นางสาวจิราพร ดำงาม","นางอุไร บุญทา",
@@ -643,7 +732,7 @@ const NURSES_PARTTIME = [
   "นางลัดดาพร พิมพ์วงษ์","นางสาวฌาณิกา พูลสระผล"
 ];
 
-function buildSelect(containerId, name, {placeholder="เลือกรายชื่อ", options=null, groups=null}={}){
+function buildSelect(containerId, name, {placeholder="เลือกรายชื่อ", options=null, groups=null, extraOption=null}={}){
   const el = document.getElementById(containerId);
   if(!el) return;
   const sel = document.createElement("select");
@@ -660,6 +749,9 @@ function buildSelect(containerId, name, {placeholder="เลือกราย�
       sel.appendChild(og);
     });
   }
+  if(extraOption){
+    sel.appendChild(new Option(extraOption, extraOption));
+  }
   el.appendChild(sel);
 }
 
@@ -672,14 +764,23 @@ buildSelect("select-nurse-anesthetist", "nurse_anesthetist", {
   groups: [
     {label:"Full-time", items: NURSES_FULLTIME},
     {label:"Part-time", items: NURSES_PARTTIME}
-  ]
+  ],
+  extraOption: "อื่นๆ"
 });
 buildSelect("select-visit-nurse", "visit_nurse", {
   placeholder: "เลือกพยาบาลเยี่ยมหลังผ่าตัด",
   groups: [
     {label:"Full-time", items: NURSES_FULLTIME},
     {label:"Part-time", items: NURSES_PARTTIME}
-  ]
+  ],
+  extraOption: "อื่นๆ"
+});
+
+document.querySelector('select[name="nurse_anesthetist"]').addEventListener("change", function(){
+  document.getElementById("nurse-anesthetist-other-wrap").style.display = this.value === "อื่นๆ" ? "block" : "none";
+});
+document.querySelector('select[name="visit_nurse"]').addEventListener("change", function(){
+  document.getElementById("visit-nurse-other-wrap").style.display = this.value === "อื่นๆ" ? "block" : "none";
 });
 
 // ---------- Ward / Department ----------
@@ -805,6 +906,33 @@ document.getElementById("bloodLossCheckbox").addEventListener("change", function
   document.getElementById("blood-loss-detail-wrap").style.display = this.checked ? "flex" : "none";
 });
 
+document.getElementById("redoseAboCheckbox").addEventListener("change", function(){
+  document.getElementById("redose-abo-time-wrap").style.display = this.checked ? "block" : "none";
+});
+
+// ---------- "No complications" mutual exclusivity ----------
+function wireNoComplications(cardId, noCompCheckboxId){
+  const card = document.getElementById(cardId);
+  const noCompCb = document.getElementById(noCompCheckboxId);
+  function otherCheckboxes(){
+    return Array.from(card.querySelectorAll('input[type="checkbox"]')).filter(cb => cb.id !== noCompCheckboxId);
+  }
+  noCompCb.addEventListener("change", function(){
+    if(this.checked){
+      otherCheckboxes().forEach(cb=>{
+        if(cb.checked){ cb.checked = false; cb.dispatchEvent(new Event("change", {bubbles:true})); }
+      });
+    }
+  });
+  otherCheckboxes().forEach(cb=>{
+    cb.addEventListener("change", function(){
+      if(this.checked && noCompCb.checked){
+        noCompCb.checked = false;
+      }
+    });
+  });
+}
+
 function updateTechniqueAdditionalVisibility(){
   const checked = Array.from(document.querySelectorAll('input[name="technique_additional[]"]:checked')).map(c=>c.value);
   const showShot = checked.includes("Epidural") || checked.includes("Spinal") || checked.includes("Peripheral nerve block");
@@ -821,6 +949,17 @@ buildChoiceGroup("group-monitor","monitor",["NIBP","Invasive BP","SpO2","Temp","
 // ---------- Airway ----------
 buildChoiceGroup("group-airway-view","airway_view",["Grade I","Grade II","Grade III","Grade IV","ไม่ได้ตรวจ"],"radio");
 buildChoiceGroup("group-airway-type","airway_type",["Orotracheal","Nasotracheal","Tracheostomy","LMA","Mask","Double lumen","Bronchial blocker","Oral airway","Nasal airway","O2 supplement","Other"],"radio");
+
+document.querySelectorAll('input[name="airway_type"]').forEach(inp=>{
+  inp.addEventListener("change", ()=>{
+    const v = document.querySelector('input[name="airway_type"]:checked')?.value;
+    const viewTypes = ["Orotracheal","Nasotracheal","Double lumen"];
+    const depthTypes = ["Orotracheal","Nasotracheal","Double lumen","Bronchial blocker"];
+    document.getElementById("airway-view-wrap").style.display = viewTypes.includes(v) ? "block" : "none";
+    document.getElementById("airway-depth-wrap").style.display = depthTypes.includes(v) ? "block" : "none";
+    document.getElementById("airway-type-other-wrap").style.display = v === "Other" ? "flex" : "none";
+  });
+});
 buildChoiceGroup("group-intubation-technique","intubation_technique",["Already intubated","Awake","Direct laryngoscope","VDO laryngoscope","fiberoptic","Frova","Manual in line stabilization","Other"],"radio");
 buildChoiceGroup("group-breathing-system","breathing_system",["Semi-closed/Circle","Semi-open: Jackson Rees/Bain"],"radio");
 
@@ -848,6 +987,9 @@ buildChoiceGroup("group-pacu-comp-other-system","pacu_comp_other_system",["Suspe
 buildChoiceGroup("group-pacu-comp-hosp","pacu_comp_hosp",["Unplanned Hospital","Unplanned ICU admission","Death"],"checkbox");
 buildChoiceGroup("group-pacu-comp-misc","pacu_comp_misc",["Sore throat","Hypothermia","Erythema/Rash/Urticaria","Nausea/vomiting","Shivering","Dental injury","Urinary retention","Fever","Subcutaneous emphysema","Blurred vision"],"checkbox");
 buildChoiceGroup("group-pacu-comp-other","pacu_comp_other",["Equipment malfunction/failure","Drug error","Other"],"checkbox");
+
+wireNoComplications("intraop-complications-card", "noCompIntraopCheckbox");
+wireNoComplications("pacu-complications-card", "noCompPacuCheckbox");
 
 // ---------- 24h follow up ----------
 buildChoiceGroup("group-followup24","followup24",["เยี่ยมไม่พบปัญหา","ผู้ป่วยกลับบ้าน","เยี่ยมผู้ป่วยให้ข้อมูลไม่ได้","เยี่ยมพบภาวะแทรกซ้อนทางวิสัญญีหลังผ่าตัด 24 ชั่วโมง"],"radio");
@@ -1111,6 +1253,136 @@ document.getElementById("submitPostopBtn").addEventListener("click", function(){
     extraData: {},
     buttonEl: this,
     defaultLabel: "บันทึก Postoperative → Google Sheet"
+  });
+});
+
+// ---------- Load existing data by HN + op_date ----------
+function setDateTriplet(prefix, ddmmyyyy){
+  if(!ddmmyyyy) return;
+  const parts = ddmmyyyy.split("/");
+  if(parts.length < 3) return;
+  const [d,m,y] = parts;
+  const daySel = document.querySelector(`[name="${prefix}_day"]`);
+  const monthSel = document.querySelector(`[name="${prefix}_month"]`);
+  const yearSel = document.querySelector(`[name="${prefix}_year"]`);
+  if(monthSel) monthSel.value = String(parseInt(m,10));
+  if(yearSel) yearSel.value = y.trim();
+  if(daySel){
+    daySel.value = String(parseInt(d,10));
+    daySel.dispatchEvent(new Event("change", {bubbles:true}));
+  }
+}
+
+function populateForm(data){
+  Object.keys(data).forEach(key=>{
+    if(["Timestamp","LastUpdated","hn"].includes(key)) return;
+    if(["dob","op_date","visit_date"].includes(key)){
+      setDateTriplet(key, data[key]);
+      return;
+    }
+    const value = (data[key] === null || data[key] === undefined) ? "" : String(data[key]);
+
+    const radios = document.querySelectorAll(`input[type="radio"][name="${key}"]`);
+    if(radios.length){
+      radios.forEach(r=>{ r.checked = (r.value === value); });
+      if(radios[0]) radios[0].dispatchEvent(new Event("change", {bubbles:true}));
+      return;
+    }
+    const multiCheckboxes = document.querySelectorAll(`input[type="checkbox"][name="${key}[]"]`);
+    if(multiCheckboxes.length){
+      const vals = value.split(";").map(s=>s.trim()).filter(Boolean);
+      multiCheckboxes.forEach(c=>{ c.checked = vals.includes(c.value); });
+      multiCheckboxes[0].dispatchEvent(new Event("change", {bubbles:true}));
+      return;
+    }
+    const singleCheckbox = document.querySelector(`input[type="checkbox"][name="${key}"]`);
+    if(singleCheckbox){
+      singleCheckbox.checked = (value === "Yes" || value === "true" || value === "on");
+      singleCheckbox.dispatchEvent(new Event("change", {bubbles:true}));
+      return;
+    }
+    const field = document.querySelector(`select[name="${key}"], input[type="text"][name="${key}"], input[type="number"][name="${key}"], textarea[name="${key}"]`);
+    if(field){
+      field.value = value;
+      field.dispatchEvent(new Event("input", {bubbles:true}));
+      field.dispatchEvent(new Event("change", {bubbles:true}));
+    }
+  });
+  recalcBMI();
+  recalcDurations();
+}
+
+let lastLookupKey = "";
+
+async function lookupExistingData(silent){
+  const loadStatus = document.getElementById("loadStatusMsg");
+  const hn = document.getElementById("hnKeyInput").value.trim();
+  const opDate = getDateTripletValue("op_date");
+
+  if(!hn || !opDate){
+    if(!silent){
+      loadStatus.style.color = "#b33";
+      loadStatus.textContent = "กรุณากรอก HN และวันที่ผ่าตัดให้ครบก่อนค้นหา";
+    }
+    return;
+  }
+  if(GOOGLE_SCRIPT_URL.indexOf("PASTE_YOUR_WEB_APP_URL_HERE") !== -1){
+    if(!silent){
+      loadStatus.style.color = "#b33";
+      loadStatus.textContent = "ยังไม่ได้ตั้งค่า Google Sheet";
+    }
+    return;
+  }
+
+  const key = hn + "|" + opDate;
+  if(silent && key === lastLookupKey) return; // avoid repeat auto-prompts for the same key
+  lastLookupKey = key;
+
+  if(!silent){
+    loadStatus.style.color = "#7a5b12";
+    loadStatus.textContent = "กำลังค้นหา...";
+  }
+
+  try{
+    const url = GOOGLE_SCRIPT_URL + "?hn=" + encodeURIComponent(hn) + "&op_date=" + encodeURIComponent(opDate);
+    const res = await fetch(url, { method: "GET" });
+    const json = await res.json();
+
+    if(json && json.found){
+      const proceed = confirm("พบข้อมูลเดิมของ HN " + hn + " วันที่ " + opDate + " ในระบบ\nต้องการโหลดข้อมูลที่เคยกรอกไว้มาแสดงในฟอร์มหรือไม่?");
+      if(proceed){
+        populateForm(json.data);
+        loadStatus.style.color = "#2e8b57";
+        loadStatus.textContent = "✔ โหลดข้อมูลเดิมของ HN " + hn + " เรียบร้อย — แก้ไขต่อแล้วกดบันทึกได้เลย";
+      } else if(!silent){
+        loadStatus.style.color = "#66788a";
+        loadStatus.textContent = "ยกเลิกการโหลดข้อมูล";
+      }
+    } else {
+      if(!silent){
+        loadStatus.style.color = "#66788a";
+        loadStatus.textContent = "ไม่พบข้อมูลเดิมของ HN + วันที่นี้ — กรอกเป็นเคสใหม่ได้เลย";
+      }
+    }
+  }catch(err){
+    if(!silent){
+      loadStatus.style.color = "#b33";
+      loadStatus.textContent = "ค้นหาไม่สำเร็จ: " + err.message + " (ถ้าเกิดจาก CORS ต้อง redeploy Apps Script เป็นเวอร์ชันล่าสุดก่อน)";
+    }
+  }
+}
+
+document.getElementById("loadExistingBtn").addEventListener("click", ()=> lookupExistingData(false));
+
+function scheduleAutoLookup(){
+  clearTimeout(window._autoLookupTimer);
+  window._autoLookupTimer = setTimeout(()=> lookupExistingData(true), 600);
+}
+document.getElementById("hnKeyInput").addEventListener("change", scheduleAutoLookup);
+document.getElementById("hnKeyInput").addEventListener("blur", scheduleAutoLookup);
+["op_date_day","op_date_month","op_date_year"].forEach(n=>{
+  document.addEventListener("change", (e)=>{
+    if(e.target && e.target.name === n) scheduleAutoLookup();
   });
 });
 </script>
