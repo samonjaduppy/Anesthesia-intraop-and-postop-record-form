@@ -516,7 +516,19 @@
         <li>สร้าง Google Sheet ใหม่ ตั้งชื่อ เช่น <code>Anesthesia_Intraop_Postop_Data</code></li>
         <li>ไปที่เมนู <b>Extensions → Apps Script</b> แล้วลบโค้ดเดิมทั้งหมด วางโค้ดนี้แทน:</li>
       </ol>
-      <textarea readonly style="min-height:340px;font-family:monospace;font-size:12px;">function doPost(e) {
+      <textarea readonly style="min-height:340px;font-family:monospace;font-size:12px;">var FORM_DATA_SHEET_NAME = "Sheet1"; // เปลี่ยนตรงนี้ถ้า tab ข้อมูลดิบของคุณชื่ออื่น (ต้องตรงกับ STATS_DATA_SHEET_NAME ใน Stats.gs ด้วย)
+
+function doPost(e) {
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000); // wait up to 30s for other doPost calls to finish first
+  } catch (lockErr) {
+    return ContentService.createTextOutput(JSON.stringify({
+      status: "error",
+      message: "Server busy, could not acquire lock. Please try saving again."
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
   try {
     if (!e || !e.postData) {
       return ContentService.createTextOutput(JSON.stringify({
@@ -525,10 +537,17 @@
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FORM_DATA_SHEET_NAME);
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({
+        status: "error",
+        message: 'ไม่พบ sheet ชื่อ "' + FORM_DATA_SHEET_NAME + '" — แก้ค่า FORM_DATA_SHEET_NAME ด้านบนให้ตรงกับชื่อ tab จริง'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
     var data = JSON.parse(e.postData.contents);
     var hn = (data["hn"] || "").toString().trim();
     var opDate = (data["op_date"] || "").toString().trim();
+
 
     var lastRow = sheet.getLastRow();
     var lastCol = sheet.getLastColumn();
@@ -541,6 +560,17 @@
     if (headers.indexOf("LastUpdated") === -1) headers.push("LastUpdated");
 
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+
+    // Force these columns to stay as PLAIN TEXT. Without this, Google Sheets silently
+    // auto-converts strings like "01/01/2570" into a real Date cell, which then reads
+    // back as a JS Date object (not the original string) and breaks the HN+op_date
+    // matching below -> caused duplicate rows instead of merging.
+    ["hn", "op_date", "dob", "visit_date"].forEach(function(colName) {
+      var idx = headers.indexOf(colName);
+      if (idx !== -1) {
+        sheet.getRange(2, idx + 1, Math.max(sheet.getMaxRows() - 1, 1), 1).setNumberFormat("@");
+      }
+    });
 
     var hnCol = headers.indexOf("hn");
     var opDateCol = headers.indexOf("op_date");
@@ -581,12 +611,14 @@
       sheet.getRange(targetRow, luCol + 1).setValue(new Date());
     }
 
-    return ContentService.createTextOutput(JSON.stringify({status: "success", row: targetRow}))
+    return ContentService.createTextOutput(JSON.stringify({status: "success", row: targetRow, scriptVersion: "v4-lock-textformat-hnopdate"}))
       .setMimeType(ContentService.MimeType.JSON);
 
   } catch (err) {
     return ContentService.createTextOutput(JSON.stringify({status: "error", message: err.message}))
       .setMimeType(ContentService.MimeType.JSON);
+  } finally {
+    lock.releaseLock();
   }
 }
 
@@ -599,7 +631,11 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(FORM_DATA_SHEET_NAME);
+    if (!sheet) {
+      return ContentService.createTextOutput(JSON.stringify({found: false, error: 'ไม่พบ sheet ชื่อ "' + FORM_DATA_SHEET_NAME + '"'}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
     var lastRow = sheet.getLastRow();
     var lastCol = sheet.getLastColumn();
     if (lastRow < 2) {
@@ -651,6 +687,7 @@ function doGet(e) {
       </ol>
       <p style="font-size:12.5px;color:var(--muted);"><b>วิธีจับคู่ Intraop กับ Postop เป็นแถวเดียวกัน:</b> ฟอร์มนี้แยกปุ่มบันทึกเป็น 2 ปุ่ม (Intraoperative / Postoperative) โดยใช้ <b>HN + วันที่ผ่าตัด</b> ที่อยู่บนสุดของหน้าเป็นตัวจับคู่ร่วมกัน — กรอกทั้งสองช่องนี้ให้ตรงกันทุกครั้ง แล้วกดปุ่มไหนก็ได้ ระบบจะค้นหาแถวที่มี HN และวันที่ผ่าตัดตรงกันอยู่แล้วใน Sheet แล้วเติมข้อมูลลงคอลัมน์ที่เกี่ยวข้องในแถวนั้นแทนการสร้างแถวใหม่ ถ้ายังไม่มีคู่ HN + วันที่นี้ในชีทมาก่อน ระบบจะสร้างแถวใหม่ให้อัตโนมัติ — ผู้ป่วยที่มาผ่าตัดหลายครั้ง (HN เดิม แต่คนละวัน) จะได้แถวแยกกันอย่างถูกต้อง</p>
       <p style="font-size:12.5px;color:var(--muted);"><b>โหลดข้อมูลที่เคยกรอกไว้กลับมาแก้ต่อ:</b> พอกรอก HN + วันที่ผ่าตัดครบ ระบบจะเช็คกับ Google Sheet ให้อัตโนมัติ (หรือกดปุ่ม "🔍 ค้นหาข้อมูลเดิม" เพื่อเช็คเอง) ถ้าเจอข้อมูลเดิมของคู่นี้จะมี popup ถามว่าต้องการโหลดกลับมาแสดงในฟอร์มไหม กด "ตกลง" แล้วข้อมูลทุกช่องที่เคยกรอกไว้จะเด้งกลับเข้าฟอร์มให้แก้ไขต่อได้ทันที (ฟีเจอร์นี้ต้องมีฟังก์ชัน <code>doGet</code> ในโค้ด Apps Script ด้วย ซึ่งรวมอยู่ในโค้ดด้านบนแล้ว — แค่วางแล้ว deploy เป็น New version ก็ใช้ได้เลย ไม่ต้องตั้งค่าเพิ่ม)</p>
+      <p style="font-size:12.5px;color:var(--muted);"><b>ป้องกันแถวซ้ำเวลากดบันทึก Intraop และ Postop ติดกันเร็วๆ:</b> โค้ดมี <code>LockService</code> คอยล็อกให้ประมวลผลทีละคำขอ ป้องกันกรณีกด "บันทึก Intraoperative" แล้วสลับแท็บไปกด "บันทึก Postoperative" เร็วเกินไป (ภายในไม่กี่วินาที) จนทั้งสองคำขอทำงานพร้อมกันและมองไม่เห็นกันและกัน ทำให้เผลอสร้างแถวซ้ำ 2 แถวแทนที่จะรวมเป็นแถวเดียว — ถ้าเคยเจอปัญหานี้มาก่อน (แถวซ้ำ timestamp ใกล้กันมาก) ให้ redeploy โค้ดชุดนี้เป็น New version แล้วปัญหาจะหายไป</p>
       <p style="font-size:12.5px;color:var(--muted);"><b>ถ้าบันทึกซ้ำด้วย HN + วันที่เดิม:</b> ค่าที่กรอกใหม่จะทับค่าเดิมในคอลัมน์นั้นๆ เสมอ (ถือว่าค่าล่าสุดถูกต้องที่สุด) <b>ยกเว้น</b>ถ้าการบันทึกครั้งใหม่ปล่อยช่องไหนว่างไว้ ระบบจะ<b>คงค่าเดิมที่เคยกรอกไว้ในชีทไว้ ไม่ลบทิ้ง</b> — ป้องกันกรณีเผลอบันทึกซ้ำแล้วช่องที่เคยกรอกไว้หายไปโดยไม่ตั้งใจ (คอลัมน์ LastUpdated จะอัปเดตทุกครั้งที่มีการบันทึกทับ ใช้เช็คว่าแถวไหนถูกแก้ไขล่าสุดเมื่อไหร่ได้)</p>
       <p style="font-size:12.5px;color:var(--muted);">หมายเหตุ: เพราะเป็นการส่งข้อมูลแบบ <code>no-cors</code> จึงไม่สามารถอ่านผลลัพธ์ตอบกลับได้โดยตรงจากฟอร์ม — ระบบจะแจ้งว่า "ส่งข้อมูลแล้ว" เมื่อคำขอถูกส่งสำเร็จ แนะนำให้เปิด Google Sheet ทิ้งไว้เพื่อตรวจสอบว่าแถวข้อมูลเข้ามาจริง</p>
       <p style="font-size:12.5px;color:var(--muted);">หมายเหตุ: เพราะเป็นการส่งข้อมูลแบบ <code>no-cors</code> จึงไม่สามารถอ่านผลลัพธ์ตอบกลับได้โดยตรงจากฟอร์ม — ระบบจะแจ้งว่า "ส่งข้อมูลแล้ว" เมื่อคำขอถูกส่งสำเร็จ แนะนำให้เปิด Google Sheet ทิ้งไว้เพื่อตรวจสอบว่าแถวข้อมูลเข้ามาจริง</p>
