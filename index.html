@@ -562,10 +562,13 @@ function doPost(e) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
 
     // Force these columns to stay as PLAIN TEXT. Without this, Google Sheets silently
-    // auto-converts strings like "01/01/2570" into a real Date cell, which then reads
-    // back as a JS Date object (not the original string) and breaks the HN+op_date
-    // matching below -> caused duplicate rows instead of merging.
-    ["hn", "op_date", "dob", "visit_date"].forEach(function(colName) {
+    // auto-converts strings like "01/01/2570" (dates) or "14:30" (times) into real
+    // Date/Time cells, which then read back as JS Date objects instead of the original
+    // string — this broke HN+op_date matching before, and can make time values look
+    // blank/wrong when the sheet is downloaded to Excel.
+    ["hn", "op_date", "dob", "visit_date",
+     "t_to_or", "t_start", "t_stop", "t_incision", "t_transfer", "t_abo", "t_redose_abo"
+    ].forEach(function(colName) {
       var idx = headers.indexOf(colName);
       if (idx !== -1) {
         sheet.getRange(2, idx + 1, Math.max(sheet.getMaxRows() - 1, 1), 1).setNumberFormat("@");
