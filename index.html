@@ -1341,7 +1341,7 @@ function populateForm(data){
       singleCheckbox.dispatchEvent(new Event("change", {bubbles:true}));
       return;
     }
-    const field = document.querySelector(`select[name="${key}"], input[type="text"][name="${key}"], input[type="number"][name="${key}"], textarea[name="${key}"]`);
+    const field = document.querySelector(`select[name="${key}"], input[type="text"][name="${key}"], input[type="number"][name="${key}"], input[type="time"][name="${key}"], input[type="date"][name="${key}"], textarea[name="${key}"]`);
     if(field){
       field.value = value;
       field.dispatchEvent(new Event("input", {bubbles:true}));
