@@ -338,7 +338,13 @@
       <div class="row">
         <div class="field"><label>Operation start (ลงมีด)</label><input type="time" name="t_incision" class="timecalc"></div>
         <div class="field"><label>Transfer</label><input type="time" name="t_transfer" class="timecalc"></div>
-        <div class="field"><label>Antibiotic start</label><input type="time" name="t_abo" class="timecalc"></div>
+        <div class="field">
+          <label>Antibiotic start</label>
+          <input type="time" name="t_abo" id="t_abo" class="timecalc">
+          <label style="display:flex;align-items:center;gap:6px;font-weight:400;margin-top:6px;">
+            <input type="checkbox" id="noAntibioticCheckbox" name="no_antibiotic" value="Yes"> No antibiotic
+          </label>
+        </div>
       </div>
       <div class="row">
         <div class="field">
@@ -350,6 +356,7 @@
           <label>เวลา Redose antibiotic</label>
           <input type="time" name="t_redose_abo">
         </div>
+      </div>
       <div class="calc-box">
         Total Anes time: <b id="calcTotalAnes">—</b> min &nbsp;|&nbsp;
         Op time: <b id="calcOpTime">—</b> min &nbsp;|&nbsp;
@@ -419,7 +426,15 @@
       <div class="subgroup"><div class="label">Miscellaneous</div><div id="group-pacu-comp-misc"></div></div>
       <div class="subgroup"><div class="label">Other</div><div id="group-pacu-comp-other"></div></div>
       <div class="row"><div class="field wide"><label>Adverse event / complication — time, description, action taken</label><textarea name="pacu_adverse_detail"></textarea></div></div>
-      <div class="row"><div class="field wide"><label>พยาบาลห้องพักฟื้น</label><input type="text" name="pacu_nurse"></div></div>
+      <div class="row">
+        <div class="field wide">
+          <label>พยาบาลห้องพักฟื้น</label>
+          <div id="select-pacu-nurse"></div>
+          <div id="pacu-nurse-other-wrap" style="display:none;margin-top:6px;">
+            <input type="text" name="pacu_nurse_other_detail" placeholder="ระบุชื่อ">
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -716,8 +731,19 @@ const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwdUqwM00bUs3
 // ============================================
 
 // ---------- Tabs ----------
+const SETUP_GUIDE_PASSWORD = "jabadupmonmon";
+let setupGuideUnlocked = false;
+
 document.querySelectorAll(".tab-btn").forEach(btn=>{
   btn.addEventListener("click",()=>{
+    if(btn.dataset.tab === "setup" && !setupGuideUnlocked){
+      const entered = prompt("ส่วนนี้ต้องใส่รหัสผ่านก่อนเข้าดู:");
+      if(entered !== SETUP_GUIDE_PASSWORD){
+        if(entered !== null) alert("รหัสผ่านไม่ถูกต้อง");
+        return;
+      }
+      setupGuideUnlocked = true;
+    }
     document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
     document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
     btn.classList.add("active");
@@ -816,17 +842,30 @@ buildSelect("select-visit-nurse", "visit_nurse", {
   extraOption: "อื่นๆ"
 });
 
+const PACU_NURSES = [
+  "นางสาวกุลนิภา รั้งกลาง","นางสาวจิดาภา พินิจ","นางสาวจิรัชญา จี้อินทร์",
+  "นางสาวชนุตต์นิชา กันมา","นางสาวนิลทิตา รอดสุข","นางสาวศุภาพิชญ์ กองศรี","นางสาววันทนา คุ้มเนตร"
+];
+buildSelect("select-pacu-nurse", "pacu_nurse", {
+  placeholder: "เลือกพยาบาลห้องพักฟื้น",
+  options: PACU_NURSES,
+  extraOption: "อื่นๆ"
+});
+
 document.querySelector('select[name="nurse_anesthetist"]').addEventListener("change", function(){
   document.getElementById("nurse-anesthetist-other-wrap").style.display = this.value === "อื่นๆ" ? "block" : "none";
 });
 document.querySelector('select[name="visit_nurse"]').addEventListener("change", function(){
   document.getElementById("visit-nurse-other-wrap").style.display = this.value === "อื่นๆ" ? "block" : "none";
 });
+document.querySelector('select[name="pacu_nurse"]').addEventListener("change", function(){
+  document.getElementById("pacu-nurse-other-wrap").style.display = this.value === "อื่นๆ" ? "block" : "none";
+});
 
 // ---------- Ward / Department ----------
 buildChoiceGroup("group-ward-main","ward_main",["OPD","IPD"],"radio");
 buildChoiceGroup("group-ward-opd","ward_opd_sub",["Sriphat dental","OPD OBGYN","OPDSx","OPDmed","Other"],"radio");
-buildChoiceGroup("group-ward-ipd","ward_ipd_sub",["11C","12C","13C","14C","14S","14B","15S","IMW","ICU","Other"],"radio");
+buildChoiceGroup("group-ward-ipd","ward_ipd_sub",["11C","12C","13C","14C","14S","14B","15S","IMW","ICU","LR","Other"],"radio");
 buildChoiceGroup("group-department","department",["Sx","Med","ENT","EYE","Ortho","OBGYN","Ped","Xray","Dental","Anes","Cath lab","Other"],"radio");
 buildChoiceGroup("group-blood-gr","blood_gr",["A","B","O","AB"],"radio");
 buildChoiceGroup("group-premedication","premedication",["No","Yes"],"radio");
@@ -988,7 +1027,7 @@ buildChoiceGroup("group-monitor","monitor",["NIBP","Invasive BP","SpO2","Temp","
 
 // ---------- Airway ----------
 buildChoiceGroup("group-airway-view","airway_view",["Grade I","Grade II","Grade III","Grade IV","ไม่ได้ตรวจ"],"radio");
-buildChoiceGroup("group-airway-type","airway_type",["Orotracheal","Nasotracheal","Tracheostomy","LMA","Mask","Double lumen","Bronchial blocker","Oral airway","Nasal airway","O2 supplement","Other"],"radio");
+buildChoiceGroup("group-airway-type","airway_type",["Orotracheal","Nasotracheal","Tracheostomy","LMA","Mask","Double lumen","Bronchial blocker","Oral airway","Nasal airway","O2 supplement","HFNC","Other"],"radio");
 
 document.querySelectorAll('input[name="airway_type"]').forEach(inp=>{
   inp.addEventListener("change", ()=>{
@@ -1017,7 +1056,7 @@ buildChoiceGroup("group-comp-neuro","comp_neuro",["Awareness (during GA)","Coma/
 buildChoiceGroup("group-comp-other-system","comp_other_system",["Suspected MH","Anaphylaxis/Anaphylactoid reaction"],"checkbox");
 buildChoiceGroup("group-comp-hosp","comp_hosp",["Unplanned Hospital","Unplanned ICU admission","Death"],"checkbox");
 buildChoiceGroup("group-comp-misc","comp_misc",["Hypothermia","Erythema/Rash/Urticaria","Nausea/vomiting","Shivering","Dental injury"],"checkbox");
-buildChoiceGroup("group-comp-other","comp_other",["Equipment malfunction/failure","Drug error","Other"],"checkbox");
+buildChoiceGroup("group-comp-other","comp_other",["Equipment malfunction/failure","Drug error","Reverse naloxone/flumazenil","Other"],"checkbox");
 
 // ---------- PACU complications ----------
 buildChoiceGroup("group-pacu-comp-intubation","pacu_comp_intubation",["Esophageal intubation","Desaturation","Re-intubation","Expected Difficult intubation","Unexpected Difficult intubation","Pulmonary aspiration"],"checkbox");
@@ -1152,13 +1191,30 @@ function recalcDurations(){
 
   const totalAnes = diffMin(start, stop);
   const opTime = diffMin(start, stop);
-  const aboTime = diffMin(abo, incision);
 
   document.getElementById("calcTotalAnes").textContent = totalAnes ?? "—";
   document.getElementById("calcOpTime").textContent = opTime ?? "—";
-  document.getElementById("calcAboTime").textContent = aboTime ?? "—";
+
+  const noAntibiotic = document.getElementById("noAntibioticCheckbox").checked;
+  if(noAntibiotic){
+    document.getElementById("calcAboTime").textContent = "No ABO";
+  } else {
+    const aboTime = diffMin(abo, incision);
+    document.getElementById("calcAboTime").textContent = aboTime ?? "—";
+  }
 }
 document.querySelectorAll(".timecalc").forEach(inp=>inp.addEventListener("change", recalcDurations));
+
+document.getElementById("noAntibioticCheckbox").addEventListener("change", function(){
+  const aboInput = document.getElementById("t_abo");
+  if(this.checked){
+    aboInput.value = "";
+    aboInput.disabled = true;
+  } else {
+    aboInput.disabled = false;
+  }
+  recalcDurations();
+});
 
 // ---------- Reset ----------
 document.getElementById("resetBtn").addEventListener("click", ()=>{
@@ -1242,6 +1298,19 @@ async function submitSection({panelId, extraDateFields, extraData, buttonEl, def
     statusEl.textContent = "⚠ กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน (เช่น รายละเอียดภาวะแทรกซ้อน 24 ชม.)";
     invalidField.focus();
     return;
+  }
+
+  if(panelId === "panel-intraop"){
+    const adverseDetail = document.querySelector('textarea[name="intraop_adverse_detail"]').value.trim();
+    if(adverseDetail){
+      const anyCompChecked = document.querySelectorAll('#intraop-complications-card input[type="checkbox"]:checked:not(#noCompIntraopCheckbox)').length > 0;
+      if(!anyCompChecked){
+        statusEl.className = "err";
+        statusEl.textContent = "⚠ มีการระบุรายละเอียด Adverse event แล้ว กรุณาเลือก checkbox หมวดภาวะแทรกซ้อนที่เกี่ยวข้องอย่างน้อย 1 อันก่อนบันทึก";
+        document.querySelector('textarea[name="intraop_adverse_detail"]').focus();
+        return;
+      }
+    }
   }
 
   const data = collectSectionData(panelId, extraDateFields);
