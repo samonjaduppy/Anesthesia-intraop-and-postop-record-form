@@ -16,8 +16,21 @@
   header h1{margin:0;font-size:20px;}
   header p{margin:4px 0 0;font-size:13px;opacity:.85;}
   .wrap{max-width:920px;margin:0 auto;padding:20px 16px 80px;}
+  .section-banner{margin:18px 0 10px;padding:10px 14px;border-radius:10px;background:var(--navy);color:#fff;}
+  .section-banner .sb-title{font-size:16px;font-weight:700;}
+  .section-banner .sb-sub{font-size:12px;opacity:.85;margin-top:2px;}
   .tabbar{display:flex;gap:8px;position:sticky;top:0;background:var(--bg);padding:12px 0;z-index:5;}
   .hn-bar{position:sticky;top:0;background:#fff3d6;border:1px solid #e6c46a;border-radius:10px;padding:10px 14px;margin:14px 0 0;z-index:6;}
+  @media (max-width:700px){
+    .hn-bar{position:static;padding:6px 8px;margin:8px 0 0;border-radius:8px;}
+    .hn-bar label{font-size:10.5px;margin-bottom:2px;}
+    .hn-bar .hn-hint{display:none;}
+    .hn-bar input{padding:5px 7px;font-size:13px;}
+    .hn-bar select{padding:4px 5px;font-size:12px;}
+    .hn-bar .btn{padding:6px 10px !important;font-size:12px !important;}
+    .tabbar{padding:6px 0;gap:6px;}
+    .tabbar button{padding:8px;font-size:13px;}
+  }
   .hn-bar label{display:block;font-size:11.5px;font-weight:700;color:#7a5b12;margin-bottom:5px;}
   .hn-bar input{width:100%;max-width:320px;padding:8px 10px;border:1px solid #e6c46a;border-radius:8px;font-size:15px;font-weight:700;background:#fff;}
   .tabbar button{flex:1;padding:12px;border:none;border-radius:10px;background:#e2e9ee;color:var(--navy);font-weight:600;font-size:14px;cursor:pointer;}
@@ -70,7 +83,7 @@
   </div>
 
   <div class="hn-bar">
-    <label for="hnKeyInput">HN + วันที่ผ่าตัด (ใช้จับคู่ข้อมูลกับแถวเดิมใน Google Sheet — กรอกทุกครั้งไม่ว่าจะบันทึกส่วน Intraop หรือ Postop)</label>
+    <label for="hnKeyInput">HN + วันที่ผ่าตัด<span class="hn-hint"> (ใช้จับคู่ข้อมูลกับแถวเดิมใน Google Sheet — กรอกทุกครั้งไม่ว่าจะบันทึกส่วน Intraop หรือ Postop)</span></label>
     <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;">
       <input type="text" id="hnKeyInput" name="hn" placeholder="กรอก HN ผู้ป่วย" form="anesForm" style="max-width:200px;">
       <div>
@@ -128,19 +141,12 @@
         <div class="field"><label>BMI (auto)</label><input type="text" name="bmi" id="bmi" readonly></div>
       </div>
       <div class="row">
-        <div class="field wide"><label>Hb (g/dL)</label><input type="text" name="hb"></div>
-      </div>
-      <div class="row">
         <div class="field wide"><label>Diagnosis</label><input type="text" name="diagnosis"></div>
         <div class="field wide"><label>Operation</label><input type="text" name="operation"></div>
       </div>
       <div class="row">
         <div class="field"><label>Surgeon</label><input type="text" name="surgeon"></div>
         <div class="field"><label>Allergy</label><input type="text" name="allergy"></div>
-      </div>
-      <div class="subgroup">
-        <div class="label">Blood group</div>
-        <div id="group-blood-gr"></div>
       </div>
       <div class="subgroup">
         <div class="label">Department</div>
@@ -177,10 +183,6 @@
         <div id="group-safety-checklist"></div>
       </div>
       <div class="subgroup">
-        <div class="label">Pressure points checked and padded</div>
-        <div id="group-pressure-points"></div>
-      </div>
-      <div class="subgroup">
         <div class="label">Eye care</div>
         <div id="group-eye-care"></div>
         <div class="row" id="eye-care-other-wrap" style="display:none;">
@@ -196,17 +198,6 @@
     <div class="card">
       <h2>Preinduction Assessment</h2>
       <div>
-        <div class="inline-q"><span class="iq-label">Change from preop assessment</span><div id="group-no-change-preop"></div></div>
-        <div class="row" id="no-change-preop-detail-wrap" style="display:none;">
-          <div class="field wide"><label>ระบุ</label><input type="text" name="no_change_preop_detail"></div>
-        </div>
-
-        <div class="inline-q"><span class="iq-label">Patient identified</span><div id="group-patient-identified"></div></div>
-
-        <div class="inline-q"><span class="iq-label">Anesthesia consent signed</span><div id="group-consent-signed"></div></div>
-
-        <div class="inline-q"><span class="iq-label">Hx PE and Lab reviewed</span><div id="group-hx-pe-lab"></div></div>
-
         <div class="inline-q"><span class="iq-label">Aspiration risk</span><div id="group-aspiration-risk"></div></div>
         <div class="row" id="aspiration-risk-detail-wrap" style="display:none;">
           <div class="field wide"><label>ระบุ due to</label><input type="text" name="aspiration_risk_detail"></div>
@@ -227,7 +218,6 @@
         <div class="field"><label>BP (mmHg)</label><input type="text" name="pre_bp" placeholder="120/80"></div>
         <div class="field"><label>HR (bpm)</label><input type="number" min="0" name="pre_hr"></div>
         <div class="field"><label>SpO2 (%)</label><input type="number" min="0" max="100" name="pre_spo2"></div>
-        <div class="field"><label>BT (°C)</label><input type="number" step="0.1" name="pre_bt"></div>
       </div>
       <div class="subgroup">
         <div class="label">Consciousness</div>
@@ -283,7 +273,7 @@
     <div class="card">
       <h2>Monitor</h2>
       <div id="group-monitor"></div>
-      <div class="row"><div class="field wide"><label>Other monitor (ระบุ)</label><input type="text" name="monitor_other_detail"></div></div>
+      <div class="row" id="monitor-other-wrap" style="display:none;"><div class="field wide"><label>Other monitor (ระบุ)</label><input type="text" name="monitor_other_detail"></div></div>
     </div>
 
     <div class="card">
@@ -306,13 +296,9 @@
       <div class="subgroup">
         <div class="label">Intubation technique</div>
         <div id="group-intubation-technique"></div>
-        <div class="row"><div class="field wide"><label>Other technique detail</label><input type="text" name="intubation_technique_other"></div></div>
+        <div class="row" id="intubation-technique-other-wrap" style="display:none;"><div class="field wide"><label>Other technique detail</label><input type="text" name="intubation_technique_other"></div></div>
       </div>
       <div class="row"><div class="field wide"><label>รายละเอียดเพิ่มเติม (ไม่บังคับ)</label><input type="text" name="airway_extra_detail"></div></div>
-      <div class="subgroup">
-        <div class="label">Breathing system</div>
-        <div id="group-breathing-system"></div>
-      </div>
     </div>
 
     <div class="card">
@@ -411,6 +397,22 @@
   <!-- =================== POSTOP =================== -->
   <section class="panel" id="panel-postop">
 
+    <div class="section-banner"><div class="sb-title">🏥 ห้องพักฟื้น (PACU)</div><div class="sb-sub">ข้อมูลระหว่างอยู่ห้องพักฟื้น</div></div>
+    <div class="card" id="pacu-pain-card">
+      <h2>Pain score ในห้องพักฟื้น (PACU)</h2>
+      <div class="row">
+        <div class="field">
+          <label>Pain score (NRS 0–10) — เมื่อมาถึง PACU</label>
+          <input type="number" min="0" max="10" name="pain_score_pacu_arrival">
+        </div>
+        <div class="field">
+          <label>Pain score (NRS 0–10) — ก่อนย้ายออกจาก PACU</label>
+          <input type="number" min="0" max="10" name="pain_score_pacu_transfer">
+        </div>
+      </div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:3px;">0–3 no/mild · 4–7 moderate · 8–10 severe</div>
+    </div>
+
     <div class="card" id="pacu-complications-card">
       <h2>ภาวะแทรกซ้อนทางวิสัญญีในห้องพักฟื้น</h2>
       <div class="subgroup">
@@ -437,6 +439,7 @@
       </div>
     </div>
 
+    <div class="section-banner"><div class="sb-title">🕐 หลังผ่าตัด 24 ชั่วโมง</div><div class="sb-sub">การติดตามเยี่ยมหลังผ่าตัด</div></div>
     <div class="card">
       <h2>บันทึกการดูแลผู้ป่วยหลังการผ่าตัด 24 ชั่วโมง</h2>
       <div id="group-followup24"></div>
@@ -484,7 +487,7 @@
     </div>
 
     <div class="card">
-      <h2>การระงับปวด</h2>
+      <h2>การระงับปวด (หลังผ่าตัด 24 ชั่วโมง)</h2>
       <div class="row">
         <div class="field">
           <label>Pain score (NRS 0–10)</label>
@@ -866,8 +869,7 @@ document.querySelector('select[name="pacu_nurse"]').addEventListener("change", f
 buildChoiceGroup("group-ward-main","ward_main",["OPD","IPD"],"radio");
 buildChoiceGroup("group-ward-opd","ward_opd_sub",["Sriphat dental","OPD OBGYN","OPDSx","OPDmed","Other"],"radio");
 buildChoiceGroup("group-ward-ipd","ward_ipd_sub",["11C","12C","13C","14C","14S","14B","15S","IMW","ICU","LR","Other"],"radio");
-buildChoiceGroup("group-department","department",["Sx","Med","ENT","EYE","Ortho","OBGYN","Ped","Xray","Dental","Anes","Cath lab","Other"],"radio");
-buildChoiceGroup("group-blood-gr","blood_gr",["A","B","O","AB"],"radio");
+buildChoiceGroup("group-department","department",["Sx","Med","ENT","EYE","Ortho","OBGYN","Ped","Xray","Dental","Anes","Cath lab","Uro","Other"],"radio");
 buildChoiceGroup("group-premedication","premedication",["No","Yes"],"radio");
 
 document.querySelectorAll('input[name="ward_main"]').forEach(inp=>{
@@ -919,21 +921,20 @@ document.getElementById("height").addEventListener("input", recalcBMI);
 
 // ---------- Patient Safety ----------
 buildChoiceGroup("group-safety-checklist","safety_checklist",["Yes","No"],"radio");
-buildChoiceGroup("group-pressure-points","pressure_points",["Yes","No"],"radio");
-buildChoiceGroup("group-eye-care","eye_care",["None","Ointment","Tape","Tegaderm","Other"],"radio");
+buildChoiceGroup("group-eye-care","eye_care",["None","Ointment","Tape","Tegaderm","Other"],"checkbox");
 buildChoiceGroup("group-warming","warming",["Blanket","Forced air warmer","HME (filter)","Fluid warmer","Ranger"],"checkbox");
-document.querySelectorAll('input[name="eye_care"]').forEach(inp=>{
-  inp.addEventListener("change", ()=>{
-    const isOther = document.querySelector('input[name="eye_care"][value="Other"]').checked;
-    document.getElementById("eye-care-other-wrap").style.display = isOther ? "flex" : "none";
-  });
+document.getElementById("group-eye-care").addEventListener("change", (ev)=>{
+  const boxes = document.querySelectorAll('input[name="eye_care[]"]');
+  const none = document.querySelector('input[name="eye_care[]"][value="None"]');
+  if(ev.target && ev.target.type==="checkbox" && ev.target.checked){
+    if(ev.target===none){ boxes.forEach(b=>{ if(b!==none) b.checked=false; }); }
+    else if(none){ none.checked=false; }
+  }
+  const o = document.querySelector('input[name="eye_care[]"][value="Other"]');
+  document.getElementById("eye-care-other-wrap").style.display = (o && o.checked) ? "flex" : "none";
 });
 
 // ---------- Preinduction ----------
-buildChoiceGroup("group-no-change-preop","no_change_preop",["No","Yes"],"radio");
-buildChoiceGroup("group-patient-identified","patient_identified",["No","Yes"],"radio");
-buildChoiceGroup("group-consent-signed","consent_signed",["No","Yes"],"radio");
-buildChoiceGroup("group-hx-pe-lab","hx_pe_lab",["No","Yes"],"radio");
 buildChoiceGroup("group-aspiration-risk","aspiration_risk",["No","Yes"],"radio");
 buildChoiceGroup("group-planned-icu","planned_icu",["No","Yes"],"radio");
 buildChoiceGroup("group-infection","infection",["No","Yes"],"radio");
@@ -946,7 +947,6 @@ function wireYesDetail(radioName, wrapId){
     });
   });
 }
-wireYesDetail("no_change_preop","no-change-preop-detail-wrap");
 wireYesDetail("aspiration_risk","aspiration-risk-detail-wrap");
 wireYesDetail("infection","infection-detail-wrap");
 
@@ -1024,6 +1024,10 @@ document.querySelectorAll('input[name="technique_additional[]"]').forEach(inp=>{
 
 // ---------- Monitor ----------
 buildChoiceGroup("group-monitor","monitor",["NIBP","Invasive BP","SpO2","Temp","EKG","EtCO2","Etgas","CVP","Urine output","Airway pressure","BIS","TOF","PPV","Other"],"checkbox");
+document.getElementById("group-monitor").addEventListener("change", ()=>{
+  const o = document.querySelector('input[name="monitor[]"][value="Other"]');
+  document.getElementById("monitor-other-wrap").style.display = (o && o.checked) ? "flex" : "none";
+});
 
 // ---------- Airway ----------
 buildChoiceGroup("group-airway-view","airway_view",["Grade I","Grade II","Grade III","Grade IV","ไม่ได้ตรวจ"],"radio");
@@ -1039,8 +1043,11 @@ document.querySelectorAll('input[name="airway_type"]').forEach(inp=>{
     document.getElementById("airway-type-other-wrap").style.display = v === "Other" ? "flex" : "none";
   });
 });
-buildChoiceGroup("group-intubation-technique","intubation_technique",["Already intubated","Awake","Direct laryngoscope","VDO laryngoscope","fiberoptic","Frova","Manual in line stabilization","Other"],"radio");
-buildChoiceGroup("group-breathing-system","breathing_system",["Semi-closed/Circle","Semi-open: Jackson Rees/Bain"],"radio");
+buildChoiceGroup("group-intubation-technique","intubation_technique",["Already intubated","Awake","Direct laryngoscope","VDO laryngoscope","fiberoptic","Frova","Manual in line stabilization","Other"],"checkbox");
+document.getElementById("group-intubation-technique").addEventListener("change", ()=>{
+  const o = document.querySelector('input[name="intubation_technique[]"][value="Other"]');
+  document.getElementById("intubation-technique-other-wrap").style.display = (o && o.checked) ? "flex" : "none";
+});
 
 // ---------- Condition before transfer ----------
 buildChoiceGroup("group-post-consciousness","post_consciousness",["ตื่นลืมตาเอง","เรียกลืมตาได้","ต้องการให้หลับต่อ","ไม่ตื่นไม่ตอบสนอง"],"radio");
